@@ -4,6 +4,7 @@ use codex_protocol::error::Result;
 use codex_protocol::models::BaseInstructions;
 use codex_protocol::models::FunctionCallOutputBody;
 use codex_protocol::models::ResponseItem;
+use codex_tools::ConfiguredToolSpec;
 use codex_tools::ToolSpec;
 use futures::Stream;
 use serde::Deserialize;
@@ -45,6 +46,25 @@ pub struct Prompt {
 }
 
 impl Prompt {
+    pub fn set_configured_tools(&mut self, configured_tools: Vec<ConfiguredToolSpec>) {
+        self.parallel_tool_calls = configured_tools
+            .iter()
+            .any(|tool| tool.supports_parallel_tool_calls);
+        self.tools = configured_tools.into_iter().map(|tool| tool.spec).collect();
+    }
+
+    pub fn configured_tools(&self) -> Vec<ConfiguredToolSpec> {
+        self.tools
+            .iter()
+            .cloned()
+            .map(|spec| ConfiguredToolSpec::new(spec, self.parallel_tool_calls))
+            .collect()
+    }
+
+    pub fn parallel_tool_calls_enabled(&self) -> bool {
+        self.parallel_tool_calls
+    }
+
     pub(crate) fn get_formatted_input(&self) -> Vec<ResponseItem> {
         let mut input = self.input.clone();
 

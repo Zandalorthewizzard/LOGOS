@@ -4,6 +4,10 @@ use codex_api::common::TextControls;
 use codex_api::create_text_param_for_request;
 use codex_protocol::config_types::ServiceTier;
 use codex_protocol::models::FunctionCallOutputPayload;
+use codex_tools::ConfiguredToolSpec;
+use codex_tools::ResponsesApiTool;
+use codex_tools::ToolSpec;
+use codex_tools::parse_tool_input_schema;
 use pretty_assertions::assert_eq;
 
 use super::*;
@@ -197,4 +201,31 @@ fn reserializes_shell_outputs_for_function_and_custom_tool_calls() {
             },
         ]
     );
+}
+
+#[test]
+fn prompt_accepts_external_configured_tools() {
+    let mut prompt = Prompt::default();
+
+    prompt.set_configured_tools(vec![ConfiguredToolSpec::new(
+        ToolSpec::Function(ResponsesApiTool {
+            name: "logos_tool".to_string(),
+            description: "LOGOS tool".to_string(),
+            strict: false,
+            defer_loading: None,
+            parameters: parse_tool_input_schema(&serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "arg": { "type": "string" }
+                }
+            }))
+            .expect("schema should parse"),
+            output_schema: None,
+        }),
+        /*supports_parallel_tool_calls*/ true,
+    )]);
+
+    assert!(prompt.parallel_tool_calls_enabled());
+    assert_eq!(prompt.configured_tools().len(), 1);
+    assert_eq!(prompt.configured_tools()[0].name(), "logos_tool");
 }
