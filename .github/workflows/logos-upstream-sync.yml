@@ -1,6 +1,6 @@
 name: LOGOS Upstream Sync
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       base_branch:

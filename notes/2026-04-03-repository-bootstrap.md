@@ -16,6 +16,14 @@
   - `.github/workflows/logos-upstream-sync.yml`
   - `scripts/logos-sync-upstream.ps1`
 
+## Fork-Safe CI Baseline
+
+- default push/PR CI is now Linux-first and GitHub-hosted
+- private OpenAI runner group usage was removed from the active baseline workflows
+- expensive macOS large-runner lanes were removed from active default workflows
+- `rust-ci-full.yml` no longer runs on every push; it is manual-only until LOGOS has matching infra
+- npm package staging in `ci.yml` is disabled by default and only runs when `LOGOS_ENABLE_NPM_STAGING=true`
+
 ## Local-Only Decision
 
 - `input-sources-temp/` remains the local reference/evidence cache and is not part of the first live fork bootstrap commit.

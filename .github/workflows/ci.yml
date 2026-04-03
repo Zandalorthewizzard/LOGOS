@@ -1,8 +1,19 @@
 name: ci
 
 on:
-  pull_request: {}
-  push: { branches: [main] }
+  pull_request:
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
+  push:
+    branches: [main]
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
 
 jobs:
   build-test:
@@ -37,6 +48,7 @@ jobs:
       - uses: facebook/install-dotslash@1e4e7b3e07eaca387acb98f1d4720e0bee8dbb6a # v2
 
       - name: Stage npm package
+        if: ${{ vars.LOGOS_ENABLE_NPM_STAGING == 'true' }}
         id: stage_npm_package
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,10 +65,15 @@ jobs:
           echo "pack_output=$PACK_OUTPUT" >> "$GITHUB_OUTPUT"
 
       - name: Upload staged npm package artifact
+        if: ${{ vars.LOGOS_ENABLE_NPM_STAGING == 'true' }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: codex-npm-staging
           path: ${{ steps.stage_npm_package.outputs.pack_output }}
+
+      - name: Note npm staging status
+        if: ${{ vars.LOGOS_ENABLE_NPM_STAGING != 'true' }}
+        run: echo "Skipping npm package staging on the LOGOS fork baseline CI."
 
       - name: Ensure root README.md contains only ASCII and certain Unicode code points
         run: ./scripts/asciicheck.py README.md

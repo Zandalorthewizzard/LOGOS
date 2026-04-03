@@ -4,10 +4,20 @@ name: Bazel
 # https://github.com/cerisier/toolchains_llvm_bootstrapped/blob/main/.github/workflows/ci.yaml
 
 on:
-  pull_request: {}
+  pull_request:
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
   push:
     branches:
       - main
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
   workflow_dispatch:
 
 concurrency:
@@ -22,27 +32,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS
-          - os: macos-15-xlarge
-            target: aarch64-apple-darwin
-          - os: macos-15-xlarge
-            target: x86_64-apple-darwin
-
-          # Linux
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-          # 2026-02-27 Bazel tests have been flaky on arm in CI.
-          # Disable until we can investigate and stabilize them.
-          # - os: ubuntu-24.04-arm
-          #   target: aarch64-unknown-linux-musl
-          # - os: ubuntu-24.04-arm
-          #   target: aarch64-unknown-linux-gnu
-
-          # Windows
-          - os: windows-latest
-            target: x86_64-pc-windows-gnullvm
     runs-on: ${{ matrix.os }}
 
     # Configure a human readable name for each job
@@ -119,16 +110,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Keep Linux lint coverage on x64 and add the arm64 macOS path that
-          # the Bazel test job already exercises. Add Windows gnullvm as well
-          # so PRs get Bazel-native lint signal on the same Windows toolchain
-          # that the Bazel test job uses.
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-          - os: macos-15-xlarge
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-gnullvm
     runs-on: ${{ matrix.os }}
     name: Bazel clippy on ${{ matrix.os }} for ${{ matrix.target }}
 

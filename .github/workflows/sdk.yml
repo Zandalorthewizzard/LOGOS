@@ -3,13 +3,22 @@ name: sdk
 on:
   push:
     branches: [main]
-  pull_request: {}
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
+  pull_request:
+    paths-ignore:
+      - docs-new/**
+      - input-docs-temp/**
+      - input-sources-temp/**
+      - notes/**
 
 jobs:
   sdks:
-    runs-on:
-      group: codex-runners
-      labels: codex-linux-x64
+    if: ${{ vars.LOGOS_ENABLE_SDK_CI != 'false' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
