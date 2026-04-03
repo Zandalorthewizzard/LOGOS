@@ -56,8 +56,9 @@ outline: []
 1. Created the live public GitHub fork `Zandalorthewizzard/LOGOS` from `openai/codex`.
 2. Initialized the local `LOGOS` working tree as a git repository with `origin` pointing to the LOGOS fork and `upstream` pointing to official Codex.
 3. Recorded and pushed the clean upstream baseline tag `logos-baseline-2026-04-03-af8a9d2`.
-4. Added live fork-operation tooling: merged repo-level `AGENTS.md`, a LOGOS fork notice in `README.md`, a LOGOS-specific pull request template, a local upstream-sync helper script, and a manual GitHub workflow for sync PR preparation.
+4. Added live fork-operation tooling: merged repo-level `AGENTS.md`, a LOGOS fork notice in `README.md`, a LOGOS-specific pull request template, and a local upstream-sync helper script.
 5. Configured the public fork description, merge settings, branch cleanup behavior, repository topics, and `main` branch protection.
+6. Reduced inherited upstream CI into a fork-safe Linux-first baseline, disabled npm staging by default, moved `rust-ci-full.yml` off the default push path, and removed the invalid GitHub upstream-sync workflow from the active workflow set while keeping a disabled reference copy in `notes/`.
 
 ## Deferred
 
@@ -135,11 +136,11 @@ outline: []
 - path: `../../.github/pull_request_template.md`
   symbol: `LOGOS Pull Request`
   lines: 1-200
-- path: `../../.github/workflows/logos-upstream-sync.yml`
-  symbol: `LOGOS Upstream Sync`
-  lines: 1-240
 - path: `../../scripts/logos-sync-upstream.ps1`
   symbol: `LOGOS Upstream Sync Helper`
+  lines: 1-240
+- path: `../../notes/logos-upstream-sync.workflow-disabled.yml`
+  symbol: `LOGOS Upstream Sync`
   lines: 1-240
 - equivalent: `git remote -v`
 - equivalent: `git tag --list "logos-baseline-*"`

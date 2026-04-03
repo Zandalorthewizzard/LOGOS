@@ -134,7 +134,8 @@ Before real implementation starts, record all of these in the repository and doc
 - `origin` points to the public LOGOS fork.
 - `upstream` points to the official Codex repository.
 - `main` is branch-protected against force-push and deletion, with conversation resolution required before merge.
-- upstream sync starts from dedicated `upstream-sync/*` branches and uses dedicated helper tooling instead of being bundled into feature work.
+- upstream sync starts from dedicated `upstream-sync/*` branches and uses the local helper script instead of being bundled into feature work.
+- the first GitHub workflow draft for upstream sync was moved out of active workflows after fork-side validation failures and remains staged only as a disabled reference copy.
 
 ## Acceptance Gates
 
@@ -160,11 +161,11 @@ Before real implementation starts, record all of these in the repository and doc
 - path: `../../../../.github/pull_request_template.md`
   symbol: `LOGOS Pull Request`
   lines: `1-200`
-- path: `../../../../.github/workflows/logos-upstream-sync.yml`
-  symbol: `LOGOS Upstream Sync`
-  lines: `1-240`
 - path: `../../../../scripts/logos-sync-upstream.ps1`
   symbol: `LOGOS Upstream Sync Helper`
+  lines: `1-240`
+- path: `../../../../notes/logos-upstream-sync.workflow-disabled.yml`
+  symbol: `LOGOS Upstream Sync`
   lines: `1-240`
 - equivalent: `git remote get-url origin` -> `https://github.com/Zandalorthewizzard/LOGOS.git`
 - equivalent: `git remote get-url upstream` -> `https://github.com/openai/codex.git`

@@ -68,7 +68,9 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 21. LOGOS now has repository-strategy docs for Codex baseline selection, upstream sync, and branch/PR workflow.
 - verified by the dated repository strategy docs under `../07-logos-phase/implementation/`.
 22. LOGOS now has a live public GitHub fork of `openai/codex`, a documented `origin`/`upstream` remote model, a pushed baseline tag, and a protected `main` branch.
-- verified by the live fork configuration, the baseline tag, and the new sync tooling wired into the repository.
+- verified by the live fork configuration, the baseline tag, and the active sync/tooling files wired into the repository.
+23. LOGOS now has a fork-safe baseline CI profile that removes private-runner dependencies from the default workflow path and disables npm staging by default.
+- verified by the active workflow files under `../../.github/workflows/`.
 
 ## Open / Deferred
 
@@ -140,12 +142,27 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - path: `../../.github/pull_request_template.md`
   symbol: `LOGOS Pull Request`
   lines: 1-200
-- path: `../../.github/workflows/logos-upstream-sync.yml`
-  symbol: `LOGOS Upstream Sync`
-  lines: 1-240
 - path: `../../scripts/logos-sync-upstream.ps1`
   symbol: `LOGOS Upstream Sync Helper`
   lines: 1-240
+- path: `../../notes/logos-upstream-sync.workflow-disabled.yml`
+  symbol: `LOGOS Upstream Sync`
+  lines: 1-240
+- path: `../../.github/workflows/ci.yml`
+  symbol: `ci`
+  lines: 1-200
+- path: `../../.github/workflows/sdk.yml`
+  symbol: `sdk`
+  lines: 1-220
+- path: `../../.github/workflows/bazel.yml`
+  symbol: `Bazel`
+  lines: 1-220
+- path: `../../.github/workflows/rust-ci.yml`
+  symbol: `rust-ci`
+  lines: 1-220
+- path: `../../.github/workflows/rust-ci-full.yml`
+  symbol: `rust-ci-full`
+  lines: 1-220
 - equivalent: `git remote get-url origin`
 - equivalent: `git remote get-url upstream`
 - equivalent: `git rev-parse logos-baseline-2026-04-03-af8a9d2`

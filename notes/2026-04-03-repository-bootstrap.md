@@ -13,8 +13,8 @@
 - baseline commit: `af8a9d2d2ba84a1dafad6fa51fe3d63e96aceb75`
 - `main` branch protection currently blocks force-push and deletion and requires conversation resolution
 - upstream sync helper files:
-  - `.github/workflows/logos-upstream-sync.yml`
   - `scripts/logos-sync-upstream.ps1`
+  - `notes/logos-upstream-sync.workflow-disabled.yml` (disabled workflow draft; not part of active baseline CI)
 
 ## Fork-Safe CI Baseline
 
@@ -23,6 +23,7 @@
 - expensive macOS large-runner lanes were removed from active default workflows
 - `rust-ci-full.yml` no longer runs on every push; it is manual-only until LOGOS has matching infra
 - npm package staging in `ci.yml` is disabled by default and only runs when `LOGOS_ENABLE_NPM_STAGING=true`
+- the first GitHub-based upstream-sync workflow draft was removed from active workflows after repeated file-level validation failures on push
 
 ## Local-Only Decision
 
