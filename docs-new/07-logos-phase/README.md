@@ -36,6 +36,7 @@ related:
     [implementation/2026-03-30-logos-global-roadmap.md],
     [implementation/2026-03-30-logos-phase-1-implementation-slice.md],
     [implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md],
+    [implementation/2026-04-03-codex-core-seam-index.md],
     [implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md],
     [implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [implementation/2026-04-02-codex-base-repository-strategy.md],
@@ -91,9 +92,10 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 32. [[implementation/2026-03-30-logos-global-roadmap.md]]
 33. [[implementation/2026-03-30-logos-phase-1-implementation-slice.md]]
 34. [[implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
-35. [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
-36. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
-37. [[research/2026-03-30-logos-research-requirements.md]]
+35. [[implementation/2026-04-03-codex-core-seam-index.md]]
+36. [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
+37. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
+38. [[research/2026-03-30-logos-research-requirements.md]]
 
 ## Folder Layout
 
@@ -153,6 +155,7 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 - [[implementation/2026-03-30-logos-global-roadmap.md]]
 - [[implementation/2026-03-30-logos-phase-1-implementation-slice.md]]
 - [[implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
+- [[implementation/2026-04-03-codex-core-seam-index.md]]
 - [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 - [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[implementation/2026-04-02-codex-base-repository-strategy.md]]

@@ -11,6 +11,7 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 5. `docs-new/02-guides/agent-navigation.md`
 6. `docs-new/02-guides/working-notes.md`
 7. `notes/README.md`
+8. `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
 
 ## Core Rules
 
@@ -24,6 +25,14 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 
 1. Do not intervene in or degrade the OpenAI Responses path or core Codex mechanics merely to achieve abstraction.
 2. Reuse as much as possible from Codex for adapters, tool runtime, and orchestration, but never by erasing provider-specific semantics or forcing other providers to pretend they are OpenAI.
+
+## Codex-Base Seam Register
+
+1. Any intentional LOGOS intervention in `codex-rs/core/` or another Codex-base seam must be registered in `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`.
+2. Each seam intervention must map to one dedicated commit that stays separate from larger consumer changes when reasonably possible.
+3. Every seam entry must explain why a wrapper/additive seam outside `codex-core` was insufficient.
+4. Prefer narrow helper, builder, or re-export seams over moving orchestration into `codex-core`.
+5. If upstream grows an equivalent public seam, update the register and retire the LOGOS-specific seam instead of quietly carrying dead divergence.
 
 ## Documentation Workflow
 
@@ -54,11 +63,15 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 - path: `docs-new/02-guides/working-notes.md`
   symbol: `Agent Working Notes Guide`
   lines: 1-200
+- path: `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+  symbol: `LOGOS Codex-Core Seam Index`
+  lines: 1-200
 
 ## Links
 
 - `docs-new/00-navigation/INDEX.md`
 - `docs-new/07-logos-phase/README.md`
+- `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
 - `docs-new/02-guides/working-notes.md`
 - `notes/README.md`
 

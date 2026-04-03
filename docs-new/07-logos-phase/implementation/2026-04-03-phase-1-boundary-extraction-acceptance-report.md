@@ -42,7 +42,8 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 1. One text-only OpenAI turn runs through the new Logos-owned boundary.
 2. One continuation flow preserves and reuses the OpenAI `previous_response_id` handle.
 3. One normalized tool-call boundary preserves a stable `call_id` through normalized events and durable in-memory turn history.
-4. Shared runtime crates do not export raw OpenAI wire structs as the shared runtime contract.
+4. Runtime-owned tool declarations can now be forwarded into the canonical OpenAI/Codex request path.
+5. Shared runtime crates do not export raw OpenAI wire structs as the shared runtime contract.
 
 ## Boundary Shape
 
@@ -86,47 +87,46 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 
 - Met for the phase-1 proof target.
 - `stable_tool_call_id_survives_normalized_boundary` proves a stable normalized tool-call boundary with preserved `call_id` and reinjected durable assistant-tool-call history.
+- `declared_runtime_tools_are_forwarded_to_openai_request` proves outbound runtime-owned tool declaration forwarding through the new seam.
 
-## Known Limitation
+## Current Limitation
 
-`logos-provider-openai` does not yet map `InternalTurnRequest.tools` into `codex_core::Prompt::tools`.
-
-Reason:
-
-1. the current Codex seam exposes `Prompt` construction publicly but does not expose a safe additive builder around model-visible tool specs and runtime tool wiring that can be consumed from the new adapter crates;
-2. phase 1 therefore preserves the canonical OpenAI path by refusing to invent a fake shared abstraction or by reaching deeper into Codex internals than the slice requires.
+`logos-provider-openai` now maps runtime-owned `request.tools` into `codex_core::Prompt` through a narrow registered Codex-core seam, but the full runtime-owned execution loop is still not complete.
 
 Current behavior:
 
-1. if `request.tools` is non-empty, the adapter returns `ProviderErrorKind::UnsupportedCapability`;
-2. inbound provider-emitted tool calls are still normalized successfully;
-3. stable tool-call ID proof and `InternalMessage::AssistantToolCall` durability are already in place.
+1. runtime-owned function-style tool definitions are forwarded into the canonical OpenAI/Codex request path;
+2. inbound provider-emitted tool calls are normalized successfully and preserve stable `call_id` values;
+3. provider-native tool declarations are still rejected with `ProviderErrorKind::UnsupportedCapability`;
+4. full runtime execution plus tool-result reinjection remains deferred beyond this slice.
 
-This limitation is explicit and accepted for the phase-1 slice because the strict-spec acceptance target requires a normalized tool-call boundary proof, not full runtime-owned tool definition export and reinjection yet.
+This keeps the phase-1 proof honest: the branch now proves outbound tool declaration forwarding and inbound normalized tool-call handling, while still deferring the larger portable execution loop.
 
 ## Why Codex-Base Changes Stayed Minimal
 
-The implementation only touched `codex-rs/Cargo.toml` to register the new additive crates in the workspace. No deeper Codex-base file changes were required because:
+The implementation uses one narrow registered Codex-core seam plus additive crates.
 
-1. `codex_core::ModelClientSession` already provides the thinnest stable OpenAI streaming seam;
-2. the adapter can wrap and map `ResponseEvent` values without rewriting transport semantics;
-3. the stable-id tool boundary proof can be delivered in additive crates for this phase.
+1. `codex_core::ModelClientSession` still provides the primary OpenAI streaming seam.
+2. The only direct Codex-core intervention is the Prompt helper seam recorded in `2026-04-03-codex-core-seam-index.md`.
+3. The adapter still owns request mapping, event mapping, and session-engine ownership outside `codex-core`.
 
 ## Tests Run
 
-1. `cargo test -p logos-session-engine`
-2. `just fix -p logos-runtime-types`
-3. `just fix -p logos-provider-api`
-4. `just fix -p logos-provider-openai`
-5. `just fix -p logos-tool-runtime`
-6. `just fix -p logos-session-engine`
-7. `just fmt`
+1. `cargo test -p codex-core client_common_tests`
+2. `cargo test -p logos-session-engine`
+3. `just fix -p codex-core`
+4. `just fix -p logos-runtime-types`
+5. `just fix -p logos-provider-api`
+6. `just fix -p logos-provider-openai`
+7. `just fix -p logos-tool-runtime`
+8. `just fix -p logos-session-engine`
+9. `just fmt`
 
 ## Deferred Follow-Ups
 
-1. Add outward mapping from `InternalTurnRequest.tools` into Codex/OpenAI tool specs through a thin additive seam.
-2. Add runtime-owned tool result reinjection for the full portable loop, not only the boundary proof.
-3. Decide whether the next seam should be a small public Codex helper for prompt tool wiring or a new Logos-owned bridge crate over existing tool registry/runtime code.
+1. Add runtime-owned tool result reinjection for the full portable loop, not only outbound tool declaration forwarding.
+2. Decide whether any second seam is needed for runtime execution metadata, or whether the remaining work can stay fully in `logos-session-engine` and `logos-tool-runtime`.
+3. Add richer capability modeling for provider-native versus runtime-owned tool declarations.
 
 ## Evidence
 
@@ -141,7 +141,10 @@ The implementation only touched `codex-rs/Cargo.toml` to register the new additi
   lines: `1-152`
 - path: `../../../codex-rs/logos-provider-openai/src/map_request.rs`
   symbol: `map_turn_request`
-  lines: `1-27`
+  lines: `1-60`
+- path: `2026-04-03-codex-core-seam-index.md`
+  symbol: `SEAM-2026-04-03-01 Prompt Tool Injection`
+  lines: `1-200`
 - path: `../../../codex-rs/logos-provider-openai/src/map_events.rs`
   symbol: `map_response_event`
   lines: `1-207`

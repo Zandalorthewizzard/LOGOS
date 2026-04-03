@@ -267,6 +267,14 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-codex-core-seam-index",
+      "path": "07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md",
+      "type": "index",
+      "focus": ["codex-core seams", "upstream merge tracking"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-phase-1-boundary-extraction-acceptance-report",
       "path": "07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md",
       "type": "report",

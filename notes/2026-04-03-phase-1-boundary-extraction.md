@@ -21,16 +21,17 @@
 
 ## Current Limitation
 
-- `logos-provider-openai` does not yet map `InternalTurnRequest.tools` into `codex_core::Prompt::tools`.
-- Current behavior is explicit: non-empty `request.tools` returns `UnsupportedCapability`.
-- Inbound provider-emitted tool calls are still normalized, so the phase-1 stable-id boundary proof is already covered.
+- `logos-provider-openai` now maps runtime-owned tool definitions into `codex_core::Prompt` through a narrow Prompt helper seam in `codex-core`.
+- Provider-native tool declarations are still unsupported from the normalized boundary.
+- Full runtime execution plus tool-result reinjection is still deferred; the current slice covers request-side declaration forwarding and inbound normalized tool-call handling.
 
-## Why This Was Left Deferred
+## Why A Small Core Seam Was Added
 
-- The current public Codex seam exposes `Prompt` but not a clean additive bridge for external crates to populate runtime-owned tool wiring without reaching deeper into `codex-core` internals.
-- For this slice it was safer to keep the limitation explicit than to widen the abstraction dishonestly or rewrite Codex mechanics.
+- The current public Codex seam exposed `Prompt` but did not expose a safe additive way for external crates to populate configured tools.
+- A narrow helper seam in `codex-core` was smaller and safer than duplicating request wiring outside core.
+- The seam is intentionally registered so future upstream merges can track it explicitly.
 
 ## Next Safe Resume Point
 
-- Extend the OpenAI adapter with a thin tool-definition bridge so `InternalTurnRequest.tools` can map into Codex model-visible tool specs.
-- Then add full runtime-owned tool result reinjection, not just inbound tool-call normalization.
+- Extend the session/tool runtime so declared tools can execute and reinject `ToolResult` messages through the normalized loop.
+- Keep any further Codex-base interventions indexed separately if another seam turns out to be unavoidable.

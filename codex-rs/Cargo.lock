@@ -6018,6 +6018,7 @@ dependencies = [
  "codex-core",
  "codex-otel",
  "codex-protocol",
+ "codex-tools",
  "futures",
  "logos-provider-api",
  "logos-runtime-types",

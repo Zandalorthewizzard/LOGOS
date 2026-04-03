@@ -7,6 +7,7 @@ use logos_runtime_types::ContentPart;
 use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
+use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::InternalTurnRequest;
 use logos_runtime_types::ModelRef;
 use logos_runtime_types::OutputMode;
@@ -52,6 +53,14 @@ impl SessionEngine {
         &mut self,
         new_messages: Vec<InternalMessage>,
     ) -> Result<TurnOutcome, ProviderError> {
+        self.run_turn_with_tools(new_messages, Vec::new()).await
+    }
+
+    pub async fn run_turn_with_tools(
+        &mut self,
+        new_messages: Vec<InternalMessage>,
+        tools: Vec<InternalToolDef>,
+    ) -> Result<TurnOutcome, ProviderError> {
         let request = InternalTurnRequest {
             model_ref: self.model_ref.clone(),
             system: self.system.clone(),
@@ -61,7 +70,7 @@ impl SessionEngine {
                 .cloned()
                 .chain(new_messages.iter().cloned())
                 .collect(),
-            tools: Vec::new(),
+            tools,
             output_mode: OutputMode::Text,
             reasoning_policy: ReasoningPolicy::Default,
             continuation: self.continuation.clone(),

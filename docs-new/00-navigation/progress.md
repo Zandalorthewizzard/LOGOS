@@ -60,7 +60,8 @@ outline: []
 5. Configured the public fork description, merge settings, branch cleanup behavior, repository topics, and `main` branch protection.
 6. Reduced inherited upstream CI into a fork-safe Linux-first baseline, disabled npm staging by default, moved `rust-ci-full.yml` off the default push path, and removed the invalid GitHub upstream-sync workflow from the active workflow set while keeping a disabled reference copy in `notes/`.
 7. Implemented the phase-1 boundary extraction slice in `codex-rs/` with five additive Logos crates and focused acceptance tests for text turn, continuation preservation, and stable tool-call ID.
-8. Added a canonical acceptance report plus a working note that document the delivered slice, the preserved OpenAI wrapper seam, and the current `request.tools` limitation in `logos-provider-openai`.
+8. Added a canonical Codex-core seam index and connected it to `AGENTS.md` so future base-seam interventions stay explicitly registered and tied to one commit each.
+9. Added a canonical acceptance report plus a working note that document the delivered slice, the preserved OpenAI wrapper seam, the registered Prompt seam, and the remaining runtime-loop limitations.
 
 ## Deferred
 
@@ -163,6 +164,9 @@ outline: []
 - path: `../07-logos-phase/implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md`
   symbol: `LOGOS Phase 1 Boundary Extraction Strict Spec`
   lines: 1-240
+- path: `../07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+  symbol: `LOGOS Codex-Core Seam Index`
+  lines: 1-220
 - path: `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`
   symbol: `LOGOS Phase 1 Boundary Extraction Acceptance Report`
   lines: 1-260

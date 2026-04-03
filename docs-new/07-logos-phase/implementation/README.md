@@ -10,6 +10,7 @@ related:
     [2026-03-30-logos-phase-1-implementation-slice.md],
     [2026-03-30-logos-global-roadmap.md],
     [2026-04-02-phase-1-boundary-extraction-strict-spec.md],
+    [2026-04-03-codex-core-seam-index.md],
     [2026-04-03-phase-1-boundary-extraction-acceptance-report.md],
     [2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [2026-04-02-codex-base-repository-strategy.md],
@@ -32,6 +33,7 @@ This folder holds phase slices, execution plans, strict implementation specs, an
 - [[2026-03-30-logos-phase-1-implementation-slice.md]]
 - [[2026-03-30-logos-global-roadmap.md]]
 - [[2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
+- [[2026-04-03-codex-core-seam-index.md]]
 - [[2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 - [[2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[2026-04-02-codex-base-repository-strategy.md]]

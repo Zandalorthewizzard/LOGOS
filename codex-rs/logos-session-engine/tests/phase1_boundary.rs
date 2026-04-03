@@ -21,7 +21,9 @@ use logos_provider_openai::OpenAiAdapterConfig;
 use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
+use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::ModelRef;
+use logos_runtime_types::ToolExecutionKind;
 use logos_session_engine::SessionEngine;
 use pretty_assertions::assert_eq;
 use serde_json::json;
@@ -160,6 +162,63 @@ async fn stable_tool_call_id_survives_normalized_boundary() {
             call_id: "call-1".to_string(),
             name: "shell".to_string(),
             arguments: json!({"command": "pwd"}),
+        })
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn declared_runtime_tools_are_forwarded_to_openai_request() {
+    let server = start_websocket_server(vec![vec![vec![
+        ev_response_created("resp-1"),
+        ev_function_call("call-1", "logos_echo", r#"{"text":"hi"}"#),
+        ev_completed("resp-1"),
+    ]]])
+    .await;
+
+    let mut session = build_session(&server).await;
+    session
+        .run_turn_with_tools(
+            vec![InternalMessage::user_text("use the tool")],
+            vec![InternalToolDef {
+                name: "logos_echo".to_string(),
+                description: "Echo back provided text".to_string(),
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"}
+                    },
+                    "required": ["text"]
+                }),
+                output_schema: Some(json!({
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"}
+                    },
+                    "required": ["text"]
+                })),
+                execution: ToolExecutionKind::RuntimeOwned,
+                metadata: Default::default(),
+            }],
+        )
+        .await
+        .expect("tool declaration turn should succeed");
+
+    let body = server
+        .single_connection()
+        .first()
+        .expect("missing request")
+        .body_json();
+    assert_eq!(body["parallel_tool_calls"].as_bool(), Some(true));
+    assert_eq!(body["tools"][0]["type"].as_str(), Some("function"));
+    assert_eq!(body["tools"][0]["name"].as_str(), Some("logos_echo"));
+    assert_eq!(
+        body["tools"][0]["parameters"],
+        json!({
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
         })
     );
 }

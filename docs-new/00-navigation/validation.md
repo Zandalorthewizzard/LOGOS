@@ -73,8 +73,10 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - verified by the active workflow files under `../../.github/workflows/`.
 24. LOGOS now has a phase-1 boundary extraction implementation slice in `codex-rs/` with additive runtime/provider/session/tool crates and focused acceptance coverage.
 - verified by the new `logos-*` crates under `../../../codex-rs/` and the phase-1 boundary tests.
-25. The current phase-1 OpenAI adapter intentionally does not map `InternalTurnRequest.tools` into `codex_core::Prompt::tools`; it returns `UnsupportedCapability` for non-empty tool defs while still proving inbound normalized tool-call boundaries with stable IDs.
-- verified by `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md` and `../../../codex-rs/logos-provider-openai/src/map_request.rs`.
+25. LOGOS now has a canonical seam register for intentional Codex-core interventions, and the first registered seam is a narrow Prompt helper for external tool injection.
+- verified by `../07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md` and `../../AGENTS.md`.
+26. The phase-1 OpenAI adapter now forwards runtime-owned tool declarations into `codex_core::Prompt` through that narrow seam, while still rejecting provider-native tool declarations and deferring full runtime execution reinjection.
+- verified by `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`, `../../../codex-rs/core/src/client_common.rs`, and `../../../codex-rs/logos-provider-openai/src/map_request.rs`.
 
 ## Open / Deferred
 
@@ -92,7 +94,7 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 12. Deferred: the feature gap matrix may still need finer per-mode rows for mixed-mode providers.
 13. Deferred: reliability and determinism are still only partially captured and may need prototype-backed dedicated docs.
 14. Deferred: review-based `main` protection may still need tightening once the maintainer model is no longer single-owner.
-15. Deferred: full outward mapping of `InternalTurnRequest.tools` into Codex/OpenAI tool definitions still needs a thin additive seam.
+15. Deferred: full runtime-owned tool execution plus tool-result reinjection is still not complete across the normalized loop.
 
 ## Evidence
 
@@ -224,6 +226,9 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - path: `../07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md`
   symbol: `LOGOS OpenCode And Goose Architecture Reference`
   lines: 1-391
+- path: `../07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+  symbol: `LOGOS Codex-Core Seam Index`
+  lines: 1-220
 - path: `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`
   symbol: `LOGOS Phase 1 Boundary Extraction Acceptance Report`
   lines: 1-260
