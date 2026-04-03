@@ -6037,6 +6037,7 @@ dependencies = [
 name = "logos-session-engine"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "codex-core",
  "codex-login",
  "codex-model-provider-info",
@@ -6058,6 +6059,7 @@ dependencies = [
 name = "logos-tool-runtime"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "logos-runtime-types",
  "serde_json",
 ]

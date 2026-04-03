@@ -62,6 +62,8 @@ outline: []
 7. Implemented the phase-1 boundary extraction slice in `codex-rs/` with five additive Logos crates and focused acceptance tests for text turn, continuation preservation, and stable tool-call ID.
 8. Added a canonical Codex-core seam index and connected it to `AGENTS.md` so future base-seam interventions stay explicitly registered and tied to one commit each.
 9. Added a canonical acceptance report plus a working note that document the delivered slice, the preserved OpenAI wrapper seam, the registered Prompt seam, and the remaining runtime-loop limitations.
+10. Extended the phase-1 slice with runtime-owned tool execution and `ToolResult` reinjection inside `logos-session-engine` and `logos-tool-runtime`, and added focused roundtrip and error-path tests.
+11. Added a `notes/devlog/` practice and stored branch and PR summaries there so future agents can recover implementation intent quickly.
 
 ## Deferred
 

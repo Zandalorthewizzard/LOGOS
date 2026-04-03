@@ -46,6 +46,8 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 1. Agents may proactively create and update files under `notes/` when continuity would help.
 2. `notes/` is non-canonical and must not replace evidence-backed docs.
 3. Important findings should be promoted into `docs-new/`.
+4. Keep lightweight development logs under `notes/devlog/` when a branch accumulates meaningful implementation milestones.
+5. Store branch summaries and PR summaries in `notes/devlog/` so future agents can recover intent without reconstructing git history from scratch.
 
 ## Current Primary Architecture Lane
 

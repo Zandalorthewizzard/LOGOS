@@ -11,6 +11,7 @@ logos-runtime-types = { workspace = true }
 logos-tool-runtime = { workspace = true }
 
 [dev-dependencies]
+async-trait = { workspace = true }
 codex-core = { workspace = true }
 codex-login = { workspace = true }
 codex-model-provider-info = { workspace = true }

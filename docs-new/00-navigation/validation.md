@@ -75,8 +75,12 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - verified by the new `logos-*` crates under `../../../codex-rs/` and the phase-1 boundary tests.
 25. LOGOS now has a canonical seam register for intentional Codex-core interventions, and the first registered seam is a narrow Prompt helper for external tool injection.
 - verified by `../07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md` and `../../AGENTS.md`.
-26. The phase-1 OpenAI adapter now forwards runtime-owned tool declarations into `codex_core::Prompt` through that narrow seam, while still rejecting provider-native tool declarations and deferring full runtime execution reinjection.
+26. The phase-1 OpenAI adapter now forwards runtime-owned tool declarations into `codex_core::Prompt` through that narrow seam.
 - verified by `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`, `../../../codex-rs/core/src/client_common.rs`, and `../../../codex-rs/logos-provider-openai/src/map_request.rs`.
+27. `logos-session-engine` and `logos-tool-runtime` now execute registered runtime-owned tools and reinject `ToolResult` follow-up turns through the normalized loop.
+- verified by `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`, `../../../codex-rs/logos-session-engine/src/session.rs`, `../../../codex-rs/logos-tool-runtime/src/lib.rs`, and `../../../codex-rs/logos-session-engine/tests/phase1_boundary.rs`.
+28. LOGOS now treats `notes/devlog/` as the preferred non-canonical location for branch summaries, PR summaries, and branch-level implementation logs.
+- verified by `../../AGENTS.md`, `../../notes/README.md`, and `../../notes/devlog/2026-04-03/`.
 
 ## Open / Deferred
 
@@ -94,7 +98,7 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 12. Deferred: the feature gap matrix may still need finer per-mode rows for mixed-mode providers.
 13. Deferred: reliability and determinism are still only partially captured and may need prototype-backed dedicated docs.
 14. Deferred: review-based `main` protection may still need tightening once the maintainer model is no longer single-owner.
-15. Deferred: full runtime-owned tool execution plus tool-result reinjection is still not complete across the normalized loop.
+15. Deferred: approval/policy-aware runtime execution and richer capability separation for provider-native versus runtime-owned tools are still incomplete across the normalized loop.
 
 ## Evidence
 

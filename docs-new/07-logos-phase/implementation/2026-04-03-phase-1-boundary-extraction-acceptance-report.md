@@ -43,7 +43,8 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 2. One continuation flow preserves and reuses the OpenAI `previous_response_id` handle.
 3. One normalized tool-call boundary preserves a stable `call_id` through normalized events and durable in-memory turn history.
 4. Runtime-owned tool declarations can now be forwarded into the canonical OpenAI/Codex request path.
-5. Shared runtime crates do not export raw OpenAI wire structs as the shared runtime contract.
+5. Runtime-owned tool results can now be reinjected through follow-up turns in the normalized session loop.
+6. Shared runtime crates do not export raw OpenAI wire structs as the shared runtime contract.
 
 ## Boundary Shape
 
@@ -51,7 +52,7 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 
 - `logos-runtime-types` owns normalized turn requests, messages, events, continuation handles, capabilities, and provider errors.
 - `logos-provider-api` owns the adapter/session traits and event stream contract.
-- `logos-tool-runtime` owns the minimal stable-id tool-call collection seam for phase 1.
+- `logos-tool-runtime` owns the stable-id tool-call collection seam plus runtime-owned tool execution dispatch for phase 1.
 
 ### OpenAI Wrapper
 
@@ -63,7 +64,7 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 ### Session Engine
 
 - `logos-session-engine` owns the turn loop facade for this slice.
-- It accumulates assistant text, captures continuation updates, and records normalized tool-call history.
+- It accumulates assistant text, captures continuation updates, records normalized tool-call history, executes registered runtime-owned tools, and reinjects `ToolResult` follow-up turns.
 
 ## Acceptance Mapping
 
@@ -88,19 +89,22 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 - Met for the phase-1 proof target.
 - `stable_tool_call_id_survives_normalized_boundary` proves a stable normalized tool-call boundary with preserved `call_id` and reinjected durable assistant-tool-call history.
 - `declared_runtime_tools_are_forwarded_to_openai_request` proves outbound runtime-owned tool declaration forwarding through the new seam.
+- `runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn` proves execution plus reinjection through the normalized loop.
+- `runtime_tool_error_is_reinjected_as_tool_result` proves tool failure is reinjected as `ToolResult` with `is_error = true`.
 
 ## Current Limitation
 
-`logos-provider-openai` now maps runtime-owned `request.tools` into `codex_core::Prompt` through a narrow registered Codex-core seam, but the full runtime-owned execution loop is still not complete.
+`logos-provider-openai` now maps runtime-owned `request.tools` into `codex_core::Prompt` through a narrow registered Codex-core seam, and `logos-session-engine` now executes registered runtime-owned tools with reinjection, but the phase-1 loop is still intentionally incomplete in a few areas.
 
 Current behavior:
 
 1. runtime-owned function-style tool definitions are forwarded into the canonical OpenAI/Codex request path;
 2. inbound provider-emitted tool calls are normalized successfully and preserve stable `call_id` values;
-3. provider-native tool declarations are still rejected with `ProviderErrorKind::UnsupportedCapability`;
-4. full runtime execution plus tool-result reinjection remains deferred beyond this slice.
+3. registered runtime-owned tools can execute and reinject `ToolResult` follow-up messages;
+4. provider-native tool declarations are still rejected with `ProviderErrorKind::UnsupportedCapability`;
+5. richer capability separation, approvals, and broader runtime metadata are still deferred.
 
-This keeps the phase-1 proof honest: the branch now proves outbound tool declaration forwarding and inbound normalized tool-call handling, while still deferring the larger portable execution loop.
+This keeps the phase-1 proof honest: the branch now proves outbound tool declaration forwarding, inbound normalized tool-call handling, and runtime-owned reinjection, while still deferring broader provider-native and policy-aware tool behavior.
 
 ## Why Codex-Base Changes Stayed Minimal
 
@@ -113,20 +117,21 @@ The implementation uses one narrow registered Codex-core seam plus additive crat
 ## Tests Run
 
 1. `cargo test -p codex-core client_common_tests`
-2. `cargo test -p logos-session-engine`
-3. `just fix -p codex-core`
-4. `just fix -p logos-runtime-types`
-5. `just fix -p logos-provider-api`
-6. `just fix -p logos-provider-openai`
-7. `just fix -p logos-tool-runtime`
-8. `just fix -p logos-session-engine`
-9. `just fmt`
+2. `cargo test -p logos-tool-runtime`
+3. `cargo test -p logos-session-engine`
+4. `just fix -p codex-core`
+5. `just fix -p logos-runtime-types`
+6. `just fix -p logos-provider-api`
+7. `just fix -p logos-provider-openai`
+8. `just fix -p logos-tool-runtime`
+9. `just fix -p logos-session-engine`
+10. `just fmt`
 
 ## Deferred Follow-Ups
 
-1. Add runtime-owned tool result reinjection for the full portable loop, not only outbound tool declaration forwarding.
-2. Decide whether any second seam is needed for runtime execution metadata, or whether the remaining work can stay fully in `logos-session-engine` and `logos-tool-runtime`.
-3. Add richer capability modeling for provider-native versus runtime-owned tool declarations.
+1. Add richer capability modeling for provider-native versus runtime-owned tool declarations and loop ownership.
+2. Add approval/policy-aware runtime execution behavior instead of the current bare execution shim.
+3. Decide whether any second seam is needed for runtime execution metadata, or whether the remaining work can stay fully in `logos-session-engine` and `logos-tool-runtime`.
 
 ## Evidence
 
@@ -150,13 +155,13 @@ The implementation uses one narrow registered Codex-core seam plus additive crat
   lines: `1-207`
 - path: `../../../codex-rs/logos-session-engine/src/session.rs`
   symbol: `SessionEngine`
-  lines: `1-109`
+  lines: `1-157`
 - path: `../../../codex-rs/logos-tool-runtime/src/lib.rs`
-  symbol: `ToolCallCollector`
-  lines: `1-71`
+  symbol: `ToolRuntime`
+  lines: `1-135`
 - path: `../../../codex-rs/logos-session-engine/tests/phase1_boundary.rs`
   symbol: `phase1 boundary tests`
-  lines: `1-225`
+  lines: `1-432`
 - path: `2026-04-02-phase-1-boundary-extraction-strict-spec.md`
   symbol: `Acceptance and Tests`
   lines: `109-121`

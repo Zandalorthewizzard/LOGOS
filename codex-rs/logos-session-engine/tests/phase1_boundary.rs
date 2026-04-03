@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use codex_core::ModelClient;
 use codex_login::CodexAuth;
 use codex_model_provider_info::ModelProviderInfo;
@@ -25,7 +26,9 @@ use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::ModelRef;
 use logos_runtime_types::ToolExecutionKind;
 use logos_session_engine::SessionEngine;
+use logos_tool_runtime::RuntimeToolExecutor;
 use pretty_assertions::assert_eq;
+use serde_json::Value;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -221,6 +224,152 @@ async fn declared_runtime_tools_are_forwarded_to_openai_request() {
             "required": ["text"]
         })
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
+    let server = start_websocket_server(vec![vec![
+        vec![
+            ev_response_created("resp-1"),
+            ev_function_call("call-1", "logos_echo", r#"{"text":"hi"}"#),
+            ev_completed("resp-1"),
+        ],
+        vec![
+            ev_response_created("resp-2"),
+            ev_output_text_delta("Echoed hi."),
+            ev_assistant_message("msg-2", "Echoed hi."),
+            ev_completed("resp-2"),
+        ],
+    ]])
+    .await;
+
+    let mut session = build_session(&server).await;
+    session.register_runtime_tool(runtime_tool_def("logos_echo"), Arc::new(EchoTool));
+
+    let outcome = session
+        .run_turn(vec![InternalMessage::user_text("use the echo tool")])
+        .await
+        .expect("runtime tool roundtrip should succeed");
+
+    assert!(outcome.events.contains(&InternalEvent::ToolCallStarted {
+        call_id: "call-1".to_string(),
+        name: "logos_echo".to_string(),
+    }));
+    assert!(outcome.events.contains(&InternalEvent::TextDelta {
+        text: "Echoed hi.".to_string(),
+    }));
+    assert_eq!(server.single_connection().len(), 2);
+    let second = server
+        .single_connection()
+        .get(1)
+        .expect("missing second request")
+        .body_json();
+    assert_eq!(second["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(
+        second["input"][0]["type"].as_str(),
+        Some("function_call_output")
+    );
+    assert_eq!(second["input"][0]["call_id"].as_str(), Some("call-1"));
+    assert_eq!(second["input"][0]["output"], json!("{\"text\":\"hi\"}"));
+    assert_eq!(
+        session.continuation(),
+        Some(&ContinuationHandle::OpenAiPreviousResponseId(
+            "resp-2".to_string()
+        ))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn runtime_tool_error_is_reinjected_as_tool_result() {
+    let server = start_websocket_server(vec![vec![
+        vec![
+            ev_response_created("resp-1"),
+            ev_function_call("call-err", "logos_fail", r#"{"text":"boom"}"#),
+            ev_completed("resp-1"),
+        ],
+        vec![
+            ev_response_created("resp-2"),
+            ev_output_text_delta("Handled tool failure."),
+            ev_assistant_message("msg-2", "Handled tool failure."),
+            ev_completed("resp-2"),
+        ],
+    ]])
+    .await;
+
+    let mut session = build_session(&server).await;
+    session.register_runtime_tool(runtime_tool_def("logos_fail"), Arc::new(FailTool));
+
+    session
+        .run_turn(vec![InternalMessage::user_text("fail")])
+        .await
+        .expect("error roundtrip should still succeed");
+
+    assert!(session.history().iter().any(|message| {
+        message
+            == &InternalMessage::ToolResult {
+                call_id: "call-err".to_string(),
+                output: json!({"error": "tool exploded"}),
+                is_error: true,
+            }
+    }));
+
+    let second = server
+        .single_connection()
+        .get(1)
+        .expect("missing second request")
+        .body_json();
+    assert_eq!(second["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(
+        second["input"][0]["type"].as_str(),
+        Some("function_call_output")
+    );
+    assert_eq!(second["input"][0]["call_id"].as_str(), Some("call-err"));
+    assert_eq!(
+        second["input"][0]["output"],
+        json!("{\"error\":\"tool exploded\"}")
+    );
+}
+
+fn runtime_tool_def(name: &str) -> InternalToolDef {
+    InternalToolDef {
+        name: name.to_string(),
+        description: format!("Runtime tool {name}"),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            }
+        })),
+        execution: ToolExecutionKind::RuntimeOwned,
+        metadata: Default::default(),
+    }
+}
+
+struct EchoTool;
+
+#[async_trait]
+impl RuntimeToolExecutor for EchoTool {
+    async fn execute(&self, arguments: Value) -> Result<Value, String> {
+        Ok(json!({
+            "text": arguments["text"].as_str().unwrap_or_default()
+        }))
+    }
+}
+
+struct FailTool;
+
+#[async_trait]
+impl RuntimeToolExecutor for FailTool {
+    async fn execute(&self, _arguments: Value) -> Result<Value, String> {
+        Err("tool exploded".to_string())
+    }
 }
 
 async fn build_session(server: &WebSocketTestServer) -> SessionEngine {
