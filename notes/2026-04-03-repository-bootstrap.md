@@ -23,6 +23,8 @@
 - expensive macOS large-runner lanes were removed from active default workflows
 - `rust-ci-full.yml` no longer runs on every push; it is manual-only until LOGOS has matching infra
 - npm package staging in `ci.yml` is disabled by default and only runs when `LOGOS_ENABLE_NPM_STAGING=true`
+- `sdk.yml` and `bazel.yml` are now manual-only heavy workflows; upstream runs them quickly with remote Bazel infra, but the fork currently falls back to local-only Bazel and was hitting the 10m/30m job timeouts
+- default LOGOS baseline is therefore the fast signal set: `ci`, `Codespell`, `cargo-deny`, and `rust-ci` for PR fast-path coverage
 - the first GitHub-based upstream-sync workflow draft was removed from active workflows after repeated file-level validation failures on push
 
 ## Local-Only Decision

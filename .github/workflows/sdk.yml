@@ -1,25 +1,15 @@
 name: sdk
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - docs-new/**
-      - input-docs-temp/**
-      - input-sources-temp/**
-      - notes/**
-  pull_request:
-    paths-ignore:
-      - docs-new/**
-      - input-docs-temp/**
-      - input-sources-temp/**
-      - notes/**
+  workflow_dispatch:
 
 jobs:
   sdks:
-    if: ${{ vars.LOGOS_ENABLE_SDK_CI != 'false' }}
+    # Keep the SDK lane manual-only until the fork has remote Bazel cache /
+    # execution comparable to upstream. On GitHub-hosted cold runners this
+    # workflow times out before it reaches the actual SDK package steps.
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
