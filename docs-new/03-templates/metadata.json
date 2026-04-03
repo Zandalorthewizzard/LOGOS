@@ -1,0 +1,19 @@
+{
+  "schema": {
+    "id": "required|string|unique",
+    "title": "required|string",
+    "type": "required|enum[guide,concept,template,navigation,utility,hub]",
+    "status": "required|enum[stable,draft,deprecated,closed,active]",
+    "tags": "required|array",
+    "related": "required|array",
+    "depends_on": "required|array",
+    "generated": "required|boolean",
+    "source_of_truth": "required|enum[code,process,discussion,governance,mixed,navigation,progress]",
+    "outline": "required|array"
+  },
+  "notes": [
+    "Use kebab-case for file names.",
+    "Use .template.md or .template.json for templates.",
+    "Keep related links bidirectional when possible."
+  ]
+}

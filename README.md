@@ -8,6 +8,10 @@ If you want Codex in your code editor (VS Code, Cursor, Windsurf), <a href="http
 </br>If you want the desktop app experience, run <code>codex app</code> or visit <a href="https://chatgpt.com/codex?app-landing-page=true">the Codex App page</a>.
 </br>If you are looking for the <em>cloud-based agent</em> from OpenAI, <strong>Codex Web</strong>, go to <a href="https://chatgpt.com/codex">chatgpt.com/codex</a>.</p>
 
+> `LOGOS` is a public fork of [`openai/codex`](https://github.com/openai/codex).
+> The active LOGOS architecture and implementation lane lives under [`docs-new/`](./docs-new/00-navigation/INDEX.md), with the current Codex-fork planning hub in [`docs-new/07-logos-phase/`](./docs-new/07-logos-phase/README.md).
+> Upstream sync is maintained through the GitHub fork relationship, the local `upstream` remote, and the dedicated sync policy in [`docs-new/07-logos-phase/implementation/2026-04-02-upstream-sync-policy.md`](./docs-new/07-logos-phase/implementation/2026-04-02-upstream-sync-policy.md).
+
 ---
 
 ## Quickstart

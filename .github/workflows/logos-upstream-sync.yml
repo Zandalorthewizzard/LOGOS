@@ -1,0 +1,143 @@
+name: LOGOS Upstream Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: Base branch to sync from upstream
+        required: true
+        default: main
+      open_pr:
+        description: Open a PR after pushing the sync branch
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/openai/codex.git
+
+      - name: Fetch base branches
+        env:
+          BASE_BRANCH: ${{ inputs.base_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --prune origin "$BASE_BRANCH"
+          git fetch --prune upstream "$BASE_BRANCH"
+
+      - name: Create sync branch
+        id: sync
+        env:
+          BASE_BRANCH: ${{ inputs.base_branch }}
+        run: |
+          set -euo pipefail
+
+          origin_sha="$(git rev-parse "origin/$BASE_BRANCH")"
+          upstream_sha="$(git rev-parse "upstream/$BASE_BRANCH")"
+
+          echo "origin_sha=$origin_sha" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$upstream_sha" >> "$GITHUB_OUTPUT"
+
+          if [ "$origin_sha" = "$upstream_sha" ]; then
+            echo "up_to_date=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          branch="upstream-sync/$(date -u +%Y-%m-%d)-${upstream_sha:0:7}"
+          git switch -C "$branch" "origin/$BASE_BRANCH"
+          git merge --no-ff --no-edit "upstream/$BASE_BRANCH"
+          git push origin "$branch"
+
+          echo "up_to_date=false" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Write workflow summary
+        env:
+          BASE_BRANCH: ${{ inputs.base_branch }}
+        run: |
+          {
+            echo "## LOGOS Upstream Sync"
+            echo
+            echo "- base branch: \`$BASE_BRANCH\`"
+            echo "- origin sha: \`${{ steps.sync.outputs.origin_sha }}\`"
+            echo "- upstream sha: \`${{ steps.sync.outputs.upstream_sha }}\`"
+            if [ "${{ steps.sync.outputs.up_to_date }}" = "true" ]; then
+              echo "- status: already in sync"
+            else
+              echo "- status: sync branch pushed"
+              echo "- sync branch: \`${{ steps.sync.outputs.branch }}\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open sync pull request
+        if: steps.sync.outputs.up_to_date == 'false' && inputs.open_pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ inputs.base_branch }}
+          SYNC_BRANCH: ${{ steps.sync.outputs.branch }}
+          ORIGIN_SHA: ${{ steps.sync.outputs.origin_sha }}
+          UPSTREAM_SHA: ${{ steps.sync.outputs.upstream_sha }}
+        run: |
+          set -euo pipefail
+
+          existing_prs="$(gh pr list --head "$SYNC_BRANCH" --base "$BASE_BRANCH" --json number --jq 'length')"
+          if [ "$existing_prs" != "0" ]; then
+            echo "A pull request already exists for $SYNC_BRANCH"
+            exit 0
+          fi
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$SYNC_BRANCH" \
+            --title "upstream-sync: openai/codex -> ${UPSTREAM_SHA:0:7}" \
+            --body "$(cat <<EOF
+## Summary
+
+Sync \`$BASE_BRANCH\` with the latest upstream Codex baseline.
+
+## Specs And Docs
+
+- Target spec(s): docs-new/07-logos-phase/implementation/2026-04-02-upstream-sync-policy.md
+- Related discussion or architecture doc(s): docs-new/07-logos-phase/implementation/2026-04-02-codex-base-repository-strategy.md
+
+## Codex Base Impact
+
+- Codex-base files touched: yes, upstream sync branch
+- If yes, why wrapper-first or additive seams were insufficient: this PR is the dedicated upstream sync path defined by policy
+
+## Canonical Path Impact
+
+- OpenAI/Codex canonical path affected: re-check required
+- If yes, expected parity impact: review upstream range before merge
+
+## Tests
+
+- Tests run: none in automation by default
+
+## Sync Metadata
+
+- Upstream sync PR: yes
+- Upstream commit range: \`$ORIGIN_SHA..$UPSTREAM_SHA\`
+- Conflict areas reviewed: transport / session / tool runtime / MCP boundary / approvals
+
+## Limits
+
+- Known limitations or deferred follow-ups: fill this section during review if wrapper seams require adjustment
+EOF
+)"

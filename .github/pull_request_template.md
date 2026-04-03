@@ -1,8 +1,34 @@
-# External (non-OpenAI) Pull Request Requirements
+# LOGOS Pull Request
 
-Before opening this Pull Request, please read the dedicated "Contributing" markdown file or your PR may be closed:
-https://github.com/openai/codex/blob/main/docs/contributing.md
+## Summary
 
-If your PR conforms to our contribution guidelines, replace this text with a detailed and high quality description of your changes.
+Describe the change clearly and link the governing discussion, issue, or strict spec.
 
-Include a link to a bug report or enhancement request.
+## Specs And Docs
+
+- Target spec(s):
+- Related discussion or architecture doc(s):
+
+## Codex Base Impact
+
+- Codex-base files touched: yes/no
+- If yes, why wrapper-first or additive seams were insufficient:
+
+## Canonical Path Impact
+
+- OpenAI/Codex canonical path affected: yes/no
+- If yes, expected parity impact:
+
+## Tests
+
+- Tests run:
+
+## Sync Metadata
+
+- Upstream sync PR: yes/no
+- If sync PR, upstream commit range:
+- Conflict areas reviewed: transport / session / tool runtime / MCP boundary / approvals
+
+## Limits
+
+- Known limitations or deferred follow-ups:

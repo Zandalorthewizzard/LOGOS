@@ -1,0 +1,30 @@
+{
+  "generated_at": "<YYYY-MM-DD>",
+  "scope": "<project-docs-scope>",
+  "docs": [
+    {
+      "id": "docs-index",
+      "path": "INDEX.md",
+      "type": "navigation",
+      "focus": ["main entrypoint"],
+      "status": "stable",
+      "source_of_truth": "navigation"
+    },
+    {
+      "id": "docs-progress",
+      "path": "_progress.md",
+      "type": "utility",
+      "focus": ["change journal"],
+      "status": "active",
+      "source_of_truth": "progress"
+    },
+    {
+      "id": "docs-validation",
+      "path": "_validation_report.md",
+      "type": "utility",
+      "focus": ["claims and evidence"],
+      "status": "active",
+      "source_of_truth": "mixed"
+    }
+  ]
+}

@@ -1,4 +1,72 @@
-# Rust/codex-rs
+# LOGOS Agent Guide
+
+LOGOS is a Codex-derived project with its own documentation system, architecture lane, and working-notes layer.
+
+## Required Reading Chain
+
+1. `docs-new/00-navigation/INDEX.md`
+2. `docs-new/01-concepts/ai-driven-development.md`
+3. `docs-new/01-concepts/strict-specs.md`
+4. `docs-new/01-concepts/discussion-first.md`
+5. `docs-new/02-guides/agent-navigation.md`
+6. `docs-new/02-guides/working-notes.md`
+7. `notes/README.md`
+
+## Core Rules
+
+1. Code and observable runtime behavior are source of truth.
+2. Canonical docs must include evidence blocks (`path`, `symbol`, `lines` or equivalent).
+3. Canonical docs without evidence are invalid and must be marked `UNKNOWN` or `deferred`.
+4. Substantial documentation changes must keep `docs-new/00-navigation/INDEX.md`, `docs-new/00-navigation/inventory.json`, `docs-new/00-navigation/progress.md`, and `docs-new/00-navigation/validation.md` synchronized.
+5. Unknown areas must be explicit. Never silently infer architecture-critical behavior.
+
+## LOGOS-Specific Locked Rules
+
+1. Do not intervene in or degrade the OpenAI Responses path or core Codex mechanics merely to achieve abstraction.
+2. Reuse as much as possible from Codex for adapters, tool runtime, and orchestration, but never by erasing provider-specific semantics or forcing other providers to pretend they are OpenAI.
+
+## Documentation Workflow
+
+1. Discussion first when scope is not locked.
+2. Then strict spec.
+3. Then implementation.
+4. If blind zones appear during implementation, route back to discussion/spec before widening the change.
+
+## Working Notes
+
+1. Agents may proactively create and update files under `notes/` when continuity would help.
+2. `notes/` is non-canonical and must not replace evidence-backed docs.
+3. Important findings should be promoted into `docs-new/`.
+
+## Current Primary Architecture Lane
+
+1. Use `docs-new/07-logos-phase/` as the main architecture lane for current Logos adapter and Codex-fork planning.
+2. Imported working materials remain staged in `input-docs-temp/`, but the active normalized docs live in `docs-new/`.
+
+## Evidence
+
+- path: `docs-new/01-concepts/discussion-first.md`
+  symbol: `Discussion-First Workflow`
+  lines: 1-120
+- path: `docs-new/03-templates/strict-spec.template.md`
+  symbol: `Strict AI Task Spec Template`
+  lines: 1-120
+- path: `docs-new/02-guides/working-notes.md`
+  symbol: `Agent Working Notes Guide`
+  lines: 1-200
+
+## Links
+
+- `docs-new/00-navigation/INDEX.md`
+- `docs-new/07-logos-phase/README.md`
+- `docs-new/02-guides/working-notes.md`
+- `notes/README.md`
+
+## Inherited Codex Repository Rules
+
+The remainder of this file is inherited from the upstream `openai/codex` repository and still applies unless it conflicts with the LOGOS rules above.
+
+### Rust/codex-rs
 
 In the codex-rs folder where the rust code lives:
 

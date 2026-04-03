@@ -1,0 +1,382 @@
+{
+  "generated_at": "2026-04-02",
+  "scope": "logos-docs",
+  "docs": [
+    {
+      "id": "logos-nav-index",
+      "path": "00-navigation/INDEX.md",
+      "type": "navigation",
+      "focus": ["main entrypoint"],
+      "status": "active",
+      "source_of_truth": "navigation"
+    },
+    {
+      "id": "logos-docs-progress",
+      "path": "00-navigation/progress.md",
+      "type": "utility",
+      "focus": ["change journal"],
+      "status": "active",
+      "source_of_truth": "progress"
+    },
+    {
+      "id": "logos-docs-validation",
+      "path": "00-navigation/validation.md",
+      "type": "utility",
+      "focus": ["claims and evidence"],
+      "status": "active",
+      "source_of_truth": "mixed"
+    },
+    {
+      "id": "logos-guide-working-notes",
+      "path": "02-guides/working-notes.md",
+      "type": "guide",
+      "focus": ["agent continuity", "notes"],
+      "status": "active",
+      "source_of_truth": "process"
+    },
+    {
+      "id": "logos-phase-hub",
+      "path": "07-logos-phase/README.md",
+      "type": "hub",
+      "focus": ["architecture lane", "current planning"],
+      "status": "active",
+      "source_of_truth": "governance"
+    },
+    {
+      "id": "logos-codex-model-agnostic-analysis",
+      "path": "07-logos-phase/analysis/2026-03-30-codex-model-agnostic-analysis.md",
+      "type": "analysis",
+      "focus": ["codex architecture", "provider constraints"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-adapter-first-discussion",
+      "path": "07-logos-phase/architecture/2026-03-30-adapter-first-architecture-discussion.md",
+      "type": "discussion",
+      "focus": ["adapter-first architecture"],
+      "status": "draft",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-adapter-boundary-spec",
+      "path": "07-logos-phase/architecture/2026-03-30-logos-adapter-boundary-spec.md",
+      "type": "spec",
+      "focus": ["adapter boundary", "locked rules"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-crate-map",
+      "path": "07-logos-phase/architecture/2026-03-30-logos-crate-map.md",
+      "type": "spec",
+      "focus": ["crate mapping", "migration planning"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-runtime-types-v0",
+      "path": "07-logos-phase/architecture/2026-03-30-logos-runtime-types-v0.md",
+      "type": "spec",
+      "focus": ["runtime contract", "types"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-adapter-project-docs-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-adapter-project-docs-spec.md",
+      "type": "spec",
+      "focus": ["documentation rules", "adapter project docs"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-adapter-kernel-architecture",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-adapter-kernel-architecture.md",
+      "type": "spec",
+      "focus": ["adapter kernel", "runtime seam"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-adapter-profiles",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-adapter-profiles.md",
+      "type": "spec",
+      "focus": ["provider profiles", "responses decisions"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-openai-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-openai-adapter-spec.md",
+      "type": "spec",
+      "focus": ["openai adapter", "canonical path"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-openrouter-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-openrouter-adapter-spec.md",
+      "type": "spec",
+      "focus": ["openrouter adapter", "validation adapter"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-gemini-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-gemini-adapter-spec.md",
+      "type": "spec",
+      "focus": ["gemini adapter", "mixed mode"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-anthropic-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-anthropic-adapter-spec.md",
+      "type": "spec",
+      "focus": ["anthropic adapter", "native-first"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-zai-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-zai-adapter-spec.md",
+      "type": "spec",
+      "focus": ["zai adapter", "mixed mode"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-lmstudio-adapter-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-provider-lmstudio-adapter-spec.md",
+      "type": "spec",
+      "focus": ["lmstudio adapter", "local validation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-persistence-resume-architecture-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-persistence-resume-architecture-spec.md",
+      "type": "spec",
+      "focus": ["persistence", "resume", "journal"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-tool-loop-architecture-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-tool-loop-architecture-spec.md",
+      "type": "spec",
+      "focus": ["tool loop", "mcp", "approvals"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-capability-model-architecture-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-capability-model-architecture-spec.md",
+      "type": "spec",
+      "focus": ["capabilities", "provider modes"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-approval-control-architecture-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-approval-control-architecture-spec.md",
+      "type": "spec",
+      "focus": ["approvals", "control flow"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-host-daemon-transport-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-host-daemon-transport-spec.md",
+      "type": "spec",
+      "focus": ["host/daemon", "transport", "ipc"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-multi-provider-feature-gap-matrix",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-multi-provider-feature-gap-matrix.md",
+      "type": "spec",
+      "focus": ["capability gaps", "provider comparison"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-runtime-contract-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-runtime-contract-spec.md",
+      "type": "spec",
+      "focus": ["runtime guarantees", "ux contract"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-runtime-tier-contract-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-runtime-tier-contract-spec.md",
+      "type": "spec",
+      "focus": ["runtime tiers", "downgrade contract"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-tier-0-semantic-surfaces-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-tier-0-semantic-surfaces-spec.md",
+      "type": "spec",
+      "focus": ["continuation", "stream ontology", "tool loop"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-adapter-health-and-drift-policy",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-adapter-health-and-drift-policy.md",
+      "type": "spec",
+      "focus": ["health contract", "drift detection"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-minimal-survivable-agent-baseline-spec",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-minimal-survivable-agent-baseline-spec.md",
+      "type": "spec",
+      "focus": ["fallback baseline", "agent survivability"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-semantics-and-guarantees-matrix",
+      "path": "07-logos-phase/architecture/2026-04-02-logos-semantics-and-guarantees-matrix.md",
+      "type": "spec",
+      "focus": ["semantics", "guarantees", "provider comparison"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-1-implementation-slice",
+      "path": "07-logos-phase/implementation/2026-03-30-logos-phase-1-implementation-slice.md",
+      "type": "spec",
+      "focus": ["phase 1", "implementation slice"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-1-boundary-extraction-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md",
+      "type": "spec",
+      "focus": ["strict implementation spec", "phase 1 boundary"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-validation-adapter-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md",
+      "type": "spec",
+      "focus": ["strict implementation spec", "openrouter validation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-codex-base-repository-strategy",
+      "path": "07-logos-phase/implementation/2026-04-02-codex-base-repository-strategy.md",
+      "type": "spec",
+      "focus": ["codex baseline", "fork strategy"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-upstream-sync-policy",
+      "path": "07-logos-phase/implementation/2026-04-02-upstream-sync-policy.md",
+      "type": "spec",
+      "focus": ["upstream sync", "maintenance workflow"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-branch-and-pr-workflow",
+      "path": "07-logos-phase/implementation/2026-04-02-branch-and-pr-workflow.md",
+      "type": "spec",
+      "focus": ["branching", "pull requests", "workflow"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-global-roadmap",
+      "path": "07-logos-phase/implementation/2026-03-30-logos-global-roadmap.md",
+      "type": "roadmap",
+      "focus": ["global roadmap", "phased plan"],
+      "status": "active",
+      "source_of_truth": "planning"
+    },
+    {
+      "id": "logos-research-requirements",
+      "path": "07-logos-phase/research/2026-03-30-logos-research-requirements.md",
+      "type": "spec",
+      "focus": ["research tasking", "discovery reduction"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-preliminary-provider-research-scan",
+      "path": "07-logos-phase/research/2026-03-30-preliminary-provider-research-scan.md",
+      "type": "research",
+      "focus": ["preliminary provider survey"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-web-source-acquisition-notes",
+      "path": "07-logos-phase/research/2026-03-30-web-source-acquisition-notes.md",
+      "type": "research",
+      "focus": ["web findings", "source acquisition"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-source-inventory-normalization",
+      "path": "07-logos-phase/research/2026-03-30-source-inventory-normalization.md",
+      "type": "research",
+      "focus": ["source cache normalization", "provider inventory"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-research-report",
+      "path": "07-logos-phase/research/2026-03-30-logos-provider-research-report.md",
+      "type": "research",
+      "focus": ["provider semantics", "resume", "tool loop"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-codex-evidence-appendix",
+      "path": "07-logos-phase/research/2026-03-30-logos-codex-evidence-appendix.md",
+      "type": "research",
+      "focus": ["code evidence", "provider snapshots"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-provider-comparison-matrix",
+      "path": "07-logos-phase/research/2026-03-30-provider-comparison-matrix.md",
+      "type": "research",
+      "focus": ["provider semantics", "matrix"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-opencode-goose-architecture-reference",
+      "path": "07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md",
+      "type": "research",
+      "focus": ["competitor architecture", "OpenCode", "Goose", "ux parity"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-research-pack-audit",
+      "path": "07-logos-phase/research/2026-03-30-research-pack-audit.md",
+      "type": "research",
+      "focus": ["research quality", "remaining gaps"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    }
+  ]
+}
