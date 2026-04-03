@@ -6001,6 +6001,67 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-provider-api"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "logos-runtime-types",
+]
+
+[[package]]
+name = "logos-provider-openai"
+version = "0.0.0"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "codex-core",
+ "codex-otel",
+ "codex-protocol",
+ "futures",
+ "logos-provider-api",
+ "logos-runtime-types",
+ "serde_json",
+]
+
+[[package]]
+name = "logos-runtime-types"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "logos-session-engine"
+version = "0.0.0"
+dependencies = [
+ "codex-core",
+ "codex-login",
+ "codex-model-provider-info",
+ "codex-otel",
+ "codex-protocol",
+ "core_test_support",
+ "futures",
+ "logos-provider-api",
+ "logos-provider-openai",
+ "logos-runtime-types",
+ "logos-tool-runtime",
+ "pretty_assertions",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "logos-tool-runtime"
+version = "0.0.0"
+dependencies = [
+ "logos-runtime-types",
+ "serde_json",
+]
+
+[[package]]
 name = "loom"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

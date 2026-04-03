@@ -267,6 +267,14 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-phase-1-boundary-extraction-acceptance-report",
+      "path": "07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md",
+      "type": "report",
+      "focus": ["acceptance report", "phase 1 boundary", "known limitations"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-openrouter-validation-adapter-strict-spec",
       "path": "07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md",
       "type": "spec",

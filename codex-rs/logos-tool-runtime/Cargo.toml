@@ -1,0 +1,12 @@
+[package]
+name = "logos-tool-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+logos-runtime-types = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
