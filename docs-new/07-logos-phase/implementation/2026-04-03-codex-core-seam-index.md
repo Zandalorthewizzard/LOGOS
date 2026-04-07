@@ -9,12 +9,12 @@ related:
     [README.md],
     [2026-04-02-codex-base-repository-strategy.md],
     [2026-04-02-upstream-sync-policy.md],
-    [2026-04-03-phase-1-boundary-extraction-acceptance-report.md]
+    [2026-04-03-phase-1-boundary-extraction-acceptance-report.md],
   ]
 depends_on:
   [
     [2026-04-02-codex-base-repository-strategy.md],
-    [2026-04-02-upstream-sync-policy.md]
+    [2026-04-02-upstream-sync-policy.md],
   ]
 generated: false
 source_of_truth: working-doc
@@ -63,6 +63,39 @@ This index records every intentional LOGOS intervention in `codex-rs/core/` or e
 - upstream_conflict_risk: `low-to-medium`; `Prompt` is central, but the seam is localized and additive.
 - rollback_or_replace_path: if upstream later exposes an equivalent public prompt-tool injection API, migrate LOGOS consumers to that upstream API and mark this seam `replaced`.
 
+### SEAM-2026-04-03-02 Explicit Continuation Carryover
+
+- status: `active`
+- introduced_by_commit: `338d695eb`
+- area:
+  1. `codex-rs/core/src/client_common.rs`
+  2. `codex-rs/core/src/client.rs`
+  3. `codex-rs/codex-api/src/common.rs`
+- why_needed: LOGOS needed an explicit boundary-owned continuation path for OpenAI turns, but the public Codex request objects did not carry `previous_response_id`. Without a seam, continuation only worked by incorrectly reusing one turn-scoped `ModelClientSession` across multiple turns.
+- minimal_scope:
+  1. add `Prompt.previous_response_id`
+  2. add `ResponsesApiRequest.previous_response_id`
+  3. propagate that field into websocket request conversion
+  4. make explicit `previous_response_id` take priority over implicit websocket carryover
+- affected_files:
+  1. `codex-rs/core/src/client_common.rs`
+  2. `codex-rs/core/src/client.rs`
+  3. `codex-rs/core/src/client_common_tests.rs`
+  4. `codex-rs/core/tests/suite/client_websockets.rs`
+  5. `codex-rs/codex-api/src/common.rs`
+- public_surface_added:
+  1. `Prompt.previous_response_id`
+  2. `ResponsesApiRequest.previous_response_id`
+- consuming_logos_crates:
+  1. `codex-rs/logos-provider-openai`
+  2. `codex-rs/logos-session-engine`
+- non_goals:
+  1. no broad session redesign in `codex-core`
+  2. no provider-specific continuation logic leaked into shared runtime types beyond the existing normalized handle
+  3. no transport rewrite beyond explicit-field propagation
+- upstream_conflict_risk: `medium`; this seam touches central request structs and websocket request preparation, but remains additive and tightly scoped to explicit continuation carryover.
+- rollback_or_replace_path: if upstream later exposes a public explicit continuation field on prompt/request builders, migrate LOGOS to that surface and retire this seam.
+
 ## Evidence
 
 - equivalent: `git show --stat --summary 983795862`
@@ -72,6 +105,15 @@ This index records every intentional LOGOS intervention in `codex-rs/core/` or e
 - path: `../../../codex-rs/core/src/client_common_tests.rs`
   symbol: `prompt_accepts_external_configured_tools`
   lines: `203-228`
+- path: `../../../codex-rs/core/src/client.rs`
+  symbol: `ModelClientSession::build_responses_request`
+  lines: `689-755`
+- path: `../../../codex-rs/core/src/client.rs`
+  symbol: `ModelClientSession::prepare_websocket_request`
+  lines: `831-857`
+- path: `../../../codex-rs/codex-api/src/common.rs`
+  symbol: `ResponsesApiRequest`
+  lines: `153-194`
 
 ## Links
 

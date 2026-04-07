@@ -163,6 +163,22 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-compaction-strategy-discussion",
+      "path": "07-logos-phase/architecture/2026-04-03-logos-compaction-strategy-discussion.md",
+      "type": "discussion",
+      "focus": ["compaction", "context checkpoints", "provider backends"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-2-openai-canonical-turn-loop-discussion",
+      "path": "07-logos-phase/architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 2", "openai canonical turn loop", "ownership split"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-tool-loop-architecture-spec",
       "path": "07-logos-phase/architecture/2026-04-02-logos-tool-loop-architecture-spec.md",
       "type": "spec",
@@ -279,6 +295,18 @@
       "path": "07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md",
       "type": "report",
       "focus": ["acceptance report", "phase 1 boundary", "known limitations"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-2-openai-canonical-turn-loop-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md",
+      "type": "spec",
+      "focus": [
+        "strict implementation spec",
+        "phase 2",
+        "openai canonical turn loop"
+      ],
       "status": "active",
       "source_of_truth": "working-doc"
     },

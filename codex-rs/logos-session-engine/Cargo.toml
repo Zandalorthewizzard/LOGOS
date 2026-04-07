@@ -9,6 +9,7 @@ futures = { workspace = true }
 logos-provider-api = { workspace = true }
 logos-runtime-types = { workspace = true }
 logos-tool-runtime = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
@@ -20,7 +21,6 @@ codex-protocol = { workspace = true }
 core_test_support = { workspace = true }
 logos-provider-openai = { workspace = true }
 pretty_assertions = { workspace = true }
-serde_json = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

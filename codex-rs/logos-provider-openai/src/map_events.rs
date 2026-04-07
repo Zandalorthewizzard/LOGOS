@@ -1,6 +1,4 @@
 use codex_core::ResponseEvent;
-use codex_protocol::models::ReasoningItemContent;
-use codex_protocol::models::ReasoningItemReasoningSummary;
 use codex_protocol::models::ResponseItem;
 use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalEvent;
@@ -43,48 +41,6 @@ pub fn map_response_event(event: ResponseEvent) -> Vec<InternalEvent> {
 fn map_output_item_added(item: ResponseItem) -> Vec<InternalEvent> {
     match item {
         ResponseItem::Message { id, .. } => vec![InternalEvent::MessageStarted { message_id: id }],
-        ResponseItem::Reasoning {
-            summary, content, ..
-        } => {
-            let mut text = String::new();
-            append_reasoning_summary(&mut text, &summary);
-            append_reasoning_content(&mut text, content.as_deref());
-            if text.is_empty() {
-                Vec::new()
-            } else {
-                vec![InternalEvent::ReasoningDelta { text }]
-            }
-        }
-        ResponseItem::FunctionCall { call_id, name, .. }
-        | ResponseItem::CustomToolCall { call_id, name, .. } => {
-            vec![InternalEvent::ToolCallStarted { call_id, name }]
-        }
-        ResponseItem::ToolSearchCall {
-            call_id: Some(call_id),
-            ..
-        } => {
-            vec![InternalEvent::ToolCallStarted {
-                call_id,
-                name: "tool_search".to_string(),
-            }]
-        }
-        ResponseItem::LocalShellCall {
-            call_id: Some(call_id),
-            ..
-        } => {
-            vec![InternalEvent::ToolCallStarted {
-                call_id,
-                name: "local_shell".to_string(),
-            }]
-        }
-        ResponseItem::LocalShellCall {
-            id: Some(call_id), ..
-        } => {
-            vec![InternalEvent::ToolCallStarted {
-                call_id,
-                name: "local_shell".to_string(),
-            }]
-        }
         _ => Vec::new(),
     }
 }
@@ -162,38 +118,93 @@ fn map_output_item_done(item: ResponseItem) -> Vec<InternalEvent> {
                 },
             ]
         }
-        ResponseItem::Reasoning {
-            summary, content, ..
-        } => {
-            let mut text = String::new();
-            append_reasoning_summary(&mut text, &summary);
-            append_reasoning_content(&mut text, content.as_deref());
-            if text.is_empty() {
-                Vec::new()
-            } else {
-                vec![InternalEvent::ReasoningDelta { text }]
-            }
-        }
         _ => Vec::new(),
     }
 }
 
-fn append_reasoning_summary(buffer: &mut String, summary: &[ReasoningItemReasoningSummary]) {
-    for entry in summary {
-        let ReasoningItemReasoningSummary::SummaryText { text } = entry;
-        buffer.push_str(text);
-    }
-}
+#[cfg(test)]
+mod tests {
+    use codex_core::ResponseEvent;
+    use codex_protocol::models::ReasoningItemReasoningSummary;
+    use codex_protocol::models::ResponseItem;
+    use logos_runtime_types::InternalEvent;
+    use pretty_assertions::assert_eq;
 
-fn append_reasoning_content(buffer: &mut String, content: Option<&[ReasoningItemContent]>) {
-    let Some(content) = content else {
-        return;
-    };
-    for entry in content {
-        match entry {
-            ReasoningItemContent::ReasoningText { text } | ReasoningItemContent::Text { text } => {
-                buffer.push_str(text)
-            }
-        }
+    use super::map_response_event;
+
+    #[test]
+    fn output_item_added_and_done_do_not_duplicate_tool_start() {
+        let events = [
+            ResponseEvent::OutputItemAdded(ResponseItem::FunctionCall {
+                id: None,
+                name: "shell".to_string(),
+                namespace: None,
+                arguments: "{\"command\":\"pwd\"}".to_string(),
+                call_id: "call-1".to_string(),
+            }),
+            ResponseEvent::OutputItemDone(ResponseItem::FunctionCall {
+                id: None,
+                name: "shell".to_string(),
+                namespace: None,
+                arguments: "{\"command\":\"pwd\"}".to_string(),
+                call_id: "call-1".to_string(),
+            }),
+        ]
+        .into_iter()
+        .flat_map(map_response_event)
+        .collect::<Vec<_>>();
+
+        assert_eq!(
+            events,
+            vec![
+                InternalEvent::ToolCallStarted {
+                    call_id: "call-1".to_string(),
+                    name: "shell".to_string(),
+                },
+                InternalEvent::ToolCallArgumentsDelta {
+                    call_id: "call-1".to_string(),
+                    delta: "{\"command\":\"pwd\"}".to_string(),
+                },
+                InternalEvent::ToolCallFinished {
+                    call_id: "call-1".to_string(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn reasoning_item_added_and_done_do_not_duplicate_reasoning_text() {
+        let events = [
+            ResponseEvent::OutputItemAdded(ResponseItem::Reasoning {
+                id: "rs-1".to_string(),
+                summary: vec![ReasoningItemReasoningSummary::SummaryText {
+                    text: "summary".to_string(),
+                }],
+                content: None,
+                encrypted_content: None,
+            }),
+            ResponseEvent::ReasoningSummaryDelta {
+                summary_index: 0,
+                delta: "summary".to_string(),
+            },
+            ResponseEvent::OutputItemDone(ResponseItem::Reasoning {
+                id: "rs-1".to_string(),
+                summary: vec![ReasoningItemReasoningSummary::SummaryText {
+                    text: "summary".to_string(),
+                }],
+                content: None,
+                encrypted_content: None,
+            }),
+        ]
+        .into_iter()
+        .flat_map(map_response_event)
+        .collect::<Vec<_>>();
+
+        assert_eq!(
+            events,
+            vec![InternalEvent::ReasoningDelta {
+                text: "summary".to_string(),
+            }]
+        );
     }
 }

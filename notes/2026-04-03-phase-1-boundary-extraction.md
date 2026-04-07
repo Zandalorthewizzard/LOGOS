@@ -22,8 +22,10 @@
 ## Current Limitation
 
 - `logos-provider-openai` now maps runtime-owned tool definitions into `codex_core::Prompt` through a narrow Prompt helper seam in `codex-core`.
-- Provider-native tool declarations are still unsupported from the normalized boundary.
-- Full runtime execution plus tool-result reinjection is still deferred; the current slice covers request-side declaration forwarding and inbound normalized tool-call handling.
+- `logos-session-engine` and `logos-tool-runtime` now execute runtime-owned tools with explicit approval events and reinject `ToolResult` follow-up turns.
+- Provider-native tool declarations remain capability-gated and unsupported on the current OpenAI phase-1 path.
+- OpenAI continuation now uses an explicit `previous_response_id` seam instead of relying on cross-turn `ModelClientSession` reuse.
+- Adapter-local event mapping no longer double-emits tool/reasoning signals on `output_item.added` plus `output_item.done`.
 
 ## Why A Small Core Seam Was Added
 
@@ -33,5 +35,5 @@
 
 ## Next Safe Resume Point
 
-- Extend the session/tool runtime so declared tools can execute and reinject `ToolResult` messages through the normalized loop.
-- Keep any further Codex-base interventions indexed separately if another seam turns out to be unavoidable.
+- Treat phase-1 as logically complete for the current strict-spec scope.
+- The next safe focus is either a later-phase spec or future durable approval/resume work rather than more boundary-slice churn.

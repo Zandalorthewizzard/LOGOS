@@ -9,12 +9,21 @@ use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
 use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::InternalTurnRequest;
+use logos_runtime_types::ModelCapabilitySet;
 use logos_runtime_types::ModelRef;
 use logos_runtime_types::OutputMode;
+use logos_runtime_types::ProviderCapabilitySet;
 use logos_runtime_types::ProviderError;
+use logos_runtime_types::ProviderErrorKind;
 use logos_runtime_types::ReasoningPolicy;
+use logos_runtime_types::ToolApprovalOutcome;
+use logos_runtime_types::ToolApprovalRequest;
+use logos_runtime_types::ToolExecutionKind;
+use logos_runtime_types::ToolExecutionPolicy;
 use logos_runtime_types::TurnLimits;
+use logos_tool_runtime::PolicyApprover;
 use logos_tool_runtime::RuntimeToolExecutor;
+use logos_tool_runtime::ToolApprover;
 use logos_tool_runtime::ToolRuntime;
 
 use crate::tool_loop::tool_calls_from_events;
@@ -23,11 +32,15 @@ use crate::turn::TurnOutcome;
 
 pub struct SessionEngine {
     provider_session: Box<dyn ProviderSession>,
+    provider_capabilities: ProviderCapabilitySet,
+    model_capabilities: ModelCapabilitySet,
     model_ref: ModelRef,
     system: Option<String>,
     history: Vec<InternalMessage>,
     continuation: Option<ContinuationHandle>,
     tool_runtime: ToolRuntime,
+    tool_execution_policy: ToolExecutionPolicy,
+    tool_approver: Arc<dyn ToolApprover>,
 }
 
 impl SessionEngine {
@@ -36,13 +49,19 @@ impl SessionEngine {
         model_ref: ModelRef,
         system: Option<String>,
     ) -> Result<Self, ProviderError> {
+        let provider_capabilities = adapter.provider_capabilities();
+        let model_capabilities = adapter.model_capabilities(&model_ref);
         Ok(Self {
             provider_session: adapter.new_session().await?,
+            provider_capabilities,
+            model_capabilities,
             model_ref,
             system,
             history: Vec::new(),
             continuation: None,
             tool_runtime: ToolRuntime::default(),
+            tool_execution_policy: ToolExecutionPolicy::default(),
+            tool_approver: Arc::new(PolicyApprover),
         })
     }
 
@@ -52,6 +71,14 @@ impl SessionEngine {
         executor: Arc<dyn RuntimeToolExecutor>,
     ) {
         self.tool_runtime.register_tool(def, executor);
+    }
+
+    pub fn set_tool_execution_policy(&mut self, policy: ToolExecutionPolicy) {
+        self.tool_execution_policy = policy;
+    }
+
+    pub fn set_tool_approver(&mut self, approver: Arc<dyn ToolApprover>) {
+        self.tool_approver = approver;
     }
 
     pub fn continuation(&self) -> Option<&ContinuationHandle> {
@@ -79,6 +106,7 @@ impl SessionEngine {
         let mut latest_continuation = self.continuation.clone();
         let mut request_tools = tools;
         request_tools.extend(self.tool_runtime.declared_tools());
+        self.validate_declared_tools(&request_tools)?;
 
         loop {
             let request = InternalTurnRequest {
@@ -134,8 +162,41 @@ impl SessionEngine {
 
             let mut tool_results = Vec::new();
             for call in pending_calls {
-                if let Some(result) = self.tool_runtime.execute_call(&call).await {
-                    tool_results.push(result);
+                if let Some(tool_def) = self.tool_runtime.tool_def(&call.name) {
+                    let request = ToolApprovalRequest {
+                        call_id: call.call_id.clone(),
+                        tool_name: call.name.clone(),
+                        execution: tool_def.execution.clone(),
+                    };
+                    all_events.push(InternalEvent::ApprovalRequested {
+                        request: request.clone(),
+                    });
+                    let outcome = self
+                        .tool_approver
+                        .decide(
+                            &request,
+                            self.tool_execution_policy
+                                .approval_mode_for(&request.tool_name, &request.execution),
+                        )
+                        .await;
+                    all_events.push(InternalEvent::ApprovalResolved {
+                        call_id: request.call_id.clone(),
+                        outcome: outcome.clone(),
+                    });
+                    match outcome {
+                        ToolApprovalOutcome::Approved => {
+                            if let Some(result) = self.tool_runtime.execute_call(&call).await {
+                                tool_results.push(result);
+                            }
+                        }
+                        ToolApprovalOutcome::Denied => {
+                            tool_results.push(InternalMessage::ToolResult {
+                                call_id: request.call_id,
+                                output: serde_json::json!({"error": "approval denied"}),
+                                is_error: true,
+                            });
+                        }
+                    }
                 }
             }
 
@@ -148,5 +209,59 @@ impl SessionEngine {
 
             pending_messages = tool_results;
         }
+    }
+
+    fn validate_declared_tools(&self, tools: &[InternalToolDef]) -> Result<(), ProviderError> {
+        if !tools.is_empty() && !self.model_capabilities.supports_tool_calling {
+            return Err(ProviderError::new(
+                self.model_ref.provider_id.clone(),
+                ProviderErrorKind::UnsupportedCapability,
+                "model does not support tool calling",
+            ));
+        }
+
+        for tool in tools {
+            match tool.execution {
+                ToolExecutionKind::RuntimeOwned | ToolExecutionKind::McpBackedRuntime => {
+                    if !self.provider_capabilities.supports_runtime_owned_tools {
+                        return Err(ProviderError::new(
+                            self.model_ref.provider_id.clone(),
+                            ProviderErrorKind::UnsupportedCapability,
+                            format!(
+                                "provider does not support runtime-owned tool '{}'",
+                                tool.name
+                            ),
+                        ));
+                    }
+                    if !self.model_capabilities.supports_runtime_tool_reinjection {
+                        return Err(ProviderError::new(
+                            self.model_ref.provider_id.clone(),
+                            ProviderErrorKind::UnsupportedCapability,
+                            format!(
+                                "model does not support runtime tool reinjection for '{}'",
+                                tool.name
+                            ),
+                        ));
+                    }
+                }
+                ToolExecutionKind::ProviderNative => {
+                    if !self.provider_capabilities.supports_provider_builtin_tools
+                        || !self.model_capabilities.supports_provider_native_tool_calls
+                        || !self.tool_execution_policy.allow_provider_native
+                    {
+                        return Err(ProviderError::new(
+                            self.model_ref.provider_id.clone(),
+                            ProviderErrorKind::UnsupportedCapability,
+                            format!(
+                                "provider-native tool '{}' is not enabled for this session",
+                                tool.name
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }

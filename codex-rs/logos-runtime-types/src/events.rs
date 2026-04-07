@@ -6,6 +6,8 @@ use crate::continuation::ContinuationHandle;
 use crate::errors::ProviderError;
 use crate::model::CallId;
 use crate::model::ProviderId;
+use crate::tools::ToolApprovalOutcome;
+use crate::tools::ToolApprovalRequest;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum InternalEvent {
@@ -28,6 +30,13 @@ pub enum InternalEvent {
     },
     ToolCallFinished {
         call_id: CallId,
+    },
+    ApprovalRequested {
+        request: ToolApprovalRequest,
+    },
+    ApprovalResolved {
+        call_id: CallId,
+        outcome: ToolApprovalOutcome,
     },
     ReasoningDelta {
         text: String,

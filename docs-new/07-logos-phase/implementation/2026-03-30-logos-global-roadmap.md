@@ -7,12 +7,13 @@ tags: [roadmap, logos, implementation, architecture]
 related:
   [
     [README.md],
+    [../architecture/2026-04-03-logos-compaction-strategy-discussion.md],
     [../architecture/2026-03-30-logos-adapter-boundary-spec.md],
     [../architecture/2026-03-30-logos-crate-map.md],
     [../architecture/2026-03-30-logos-runtime-types-v0.md],
     [../research/2026-03-30-logos-provider-research-report.md],
     [../research/2026-03-30-provider-comparison-matrix.md],
-    [2026-03-30-logos-phase-1-implementation-slice.md]
+    [2026-03-30-logos-phase-1-implementation-slice.md],
   ]
 depends_on: [[../research/2026-03-30-logos-provider-research-report.md]]
 generated: false
@@ -116,11 +117,17 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 1. `stream_turn()` working for OpenAI.
 2. Continuation handle preservation.
 3. Completion and ordering invariants enforced.
+4. Canonical OpenAI compaction behavior preserved without promoting provider-name backend checks into shared LOGOS architecture.
 
 ### Exit Criteria
 
 1. OpenAI text-only and structured-output turns work.
 2. Stateful follow-up turn works through the boundary.
+
+### Canonical Planning Inputs
+
+1. `../architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md`
+2. `2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md`
 
 ## Phase 3: Tool Loop Boundary
 
@@ -148,17 +155,20 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 1. Define Logos-native durable journal.
 2. Support OpenAI stateful continuation and stateless replay mode.
 3. Avoid storing raw provider wire formats as the canonical record model.
+4. Lock a LOGOS-owned compaction policy that can use native or portable backends without making compaction output the canonical instruction source.
 
 ### Deliverables
 
 1. Persistence schema v0.
 2. Resume flow for OpenAI path.
 3. Client-managed replay flow for stateless adapters.
+4. Compaction policy and backend contract aligned with [[../architecture/2026-04-03-logos-compaction-strategy-discussion.md]].
 
 ### Exit Criteria
 
 1. OpenAI resume works after process restart.
 2. Stateless replay works for a validation adapter.
+3. Compaction checkpointing preserves canonical instruction reinjection and does not corrupt resume semantics.
 
 ## Phase 5: Validation Adapter
 

@@ -16,8 +16,10 @@ related:
     [../02-guides/working-notes.md],
     [../03-templates/strict-spec.template.md],
     [../07-logos-phase/README.md],
-    [../07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md],
-    [../../notes/README.md]
+    [
+      ../07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md,
+    ],
+    [../../notes/README.md],
   ]
 depends_on: []
 generated: false
@@ -61,6 +63,8 @@ outline: []
 - [[../07-logos-phase/architecture/2026-04-02-logos-provider-zai-adapter-spec.md]]
 - [[../07-logos-phase/architecture/2026-04-02-logos-provider-lmstudio-adapter-spec.md]]
 - [[../07-logos-phase/architecture/2026-04-02-logos-persistence-resume-architecture-spec.md]]
+- [[../07-logos-phase/architecture/2026-04-03-logos-compaction-strategy-discussion.md]]
+- [[../07-logos-phase/architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md]]
 - [[../07-logos-phase/architecture/2026-04-02-logos-tool-loop-architecture-spec.md]]
 - [[../07-logos-phase/architecture/2026-04-02-logos-capability-model-architecture-spec.md]]
 - [[../07-logos-phase/architecture/2026-04-02-logos-approval-control-architecture-spec.md]]
@@ -76,6 +80,7 @@ outline: []
 - [[../07-logos-phase/implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
 - [[../07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md]]
 - [[../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
+- [[../07-logos-phase/implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
 - [[../07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[../07-logos-phase/implementation/2026-04-02-codex-base-repository-strategy.md]]
 - [[../07-logos-phase/implementation/2026-04-02-upstream-sync-policy.md]]

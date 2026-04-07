@@ -24,9 +24,14 @@ use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
 use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::ModelRef;
+use logos_runtime_types::ToolApprovalMode;
+use logos_runtime_types::ToolApprovalOutcome;
+use logos_runtime_types::ToolApprovalRequest;
 use logos_runtime_types::ToolExecutionKind;
+use logos_runtime_types::ToolExecutionPolicy;
 use logos_session_engine::SessionEngine;
 use logos_tool_runtime::RuntimeToolExecutor;
+use logos_tool_runtime::ToolApprover;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 use serde_json::json;
@@ -104,13 +109,21 @@ async fn continuation_handle_is_preserved_for_follow_up_turn() {
         .expect("missing second request")
         .body_json();
     assert_eq!(second["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(second["input"].as_array().map(Vec::len), Some(3));
+    assert_eq!(second["input"][0]["role"].as_str(), Some("user"));
     assert_eq!(
-        second["input"],
-        json!([{
-            "type": "message",
-            "role": "user",
-            "content": [{"type": "input_text", "text": "follow up"}]
-        }])
+        second["input"][0]["content"][0]["text"].as_str(),
+        Some("hello")
+    );
+    assert_eq!(second["input"][1]["role"].as_str(), Some("assistant"));
+    assert_eq!(
+        second["input"][1]["content"][0]["text"].as_str(),
+        Some("First answer.")
+    );
+    assert_eq!(second["input"][2]["role"].as_str(), Some("user"));
+    assert_eq!(
+        second["input"][2]["content"][0]["text"].as_str(),
+        Some("follow up")
     );
     assert_eq!(
         session.continuation(),
@@ -251,6 +264,17 @@ async fn runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
         .await
         .expect("runtime tool roundtrip should succeed");
 
+    assert!(outcome.events.contains(&InternalEvent::ApprovalRequested {
+        request: ToolApprovalRequest {
+            call_id: "call-1".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+        },
+    }));
+    assert!(outcome.events.contains(&InternalEvent::ApprovalResolved {
+        call_id: "call-1".to_string(),
+        outcome: ToolApprovalOutcome::Approved,
+    }));
     assert!(outcome.events.contains(&InternalEvent::ToolCallStarted {
         call_id: "call-1".to_string(),
         name: "logos_echo".to_string(),
@@ -265,12 +289,13 @@ async fn runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
         .expect("missing second request")
         .body_json();
     assert_eq!(second["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(second["input"].as_array().map(Vec::len), Some(3));
     assert_eq!(
-        second["input"][0]["type"].as_str(),
+        second["input"][2]["type"].as_str(),
         Some("function_call_output")
     );
-    assert_eq!(second["input"][0]["call_id"].as_str(), Some("call-1"));
-    assert_eq!(second["input"][0]["output"], json!("{\"text\":\"hi\"}"));
+    assert_eq!(second["input"][2]["call_id"].as_str(), Some("call-1"));
+    assert_eq!(second["input"][2]["output"], json!("{\"text\":\"hi\"}"));
     assert_eq!(
         session.continuation(),
         Some(&ContinuationHandle::OpenAiPreviousResponseId(
@@ -319,14 +344,94 @@ async fn runtime_tool_error_is_reinjected_as_tool_result() {
         .expect("missing second request")
         .body_json();
     assert_eq!(second["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(second["input"].as_array().map(Vec::len), Some(3));
     assert_eq!(
-        second["input"][0]["type"].as_str(),
+        second["input"][2]["type"].as_str(),
         Some("function_call_output")
     );
-    assert_eq!(second["input"][0]["call_id"].as_str(), Some("call-err"));
+    assert_eq!(second["input"][2]["call_id"].as_str(), Some("call-err"));
     assert_eq!(
-        second["input"][0]["output"],
+        second["input"][2]["output"],
         json!("{\"error\":\"tool exploded\"}")
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn denied_runtime_tool_is_reinjected_without_execution() {
+    let server = start_websocket_server(vec![vec![
+        vec![
+            ev_response_created("resp-1"),
+            ev_function_call("call-deny", "logos_echo", r#"{"text":"hi"}"#),
+            ev_completed("resp-1"),
+        ],
+        vec![
+            ev_response_created("resp-2"),
+            ev_output_text_delta("Approval denied was observed."),
+            ev_assistant_message("msg-2", "Approval denied was observed."),
+            ev_completed("resp-2"),
+        ],
+    ]])
+    .await;
+
+    let mut session = build_session(&server).await;
+    session.register_runtime_tool(runtime_tool_def("logos_echo"), Arc::new(EchoTool));
+    session.set_tool_execution_policy(ToolExecutionPolicy {
+        runtime_owned_default: ToolApprovalMode::RequireApproval,
+        ..ToolExecutionPolicy::default()
+    });
+    session.set_tool_approver(Arc::new(DenyApprover));
+
+    let outcome = session
+        .run_turn(vec![InternalMessage::user_text("deny the tool")])
+        .await
+        .expect("denied tool flow should succeed");
+
+    assert!(outcome.events.contains(&InternalEvent::ApprovalResolved {
+        call_id: "call-deny".to_string(),
+        outcome: ToolApprovalOutcome::Denied,
+    }));
+    assert!(session.history().iter().any(|message| {
+        message
+            == &InternalMessage::ToolResult {
+                call_id: "call-deny".to_string(),
+                output: json!({"error": "approval denied"}),
+                is_error: true,
+            }
+    }));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn provider_native_tool_declaration_is_capability_gated() {
+    let server = start_websocket_server(vec![]).await;
+    let mut session = build_session(&server).await;
+    session.set_tool_execution_policy(ToolExecutionPolicy {
+        allow_provider_native: true,
+        ..ToolExecutionPolicy::default()
+    });
+
+    let error = session
+        .run_turn_with_tools(
+            vec![InternalMessage::user_text("use provider-native tool")],
+            vec![InternalToolDef {
+                name: "provider_search".to_string(),
+                description: "Provider-native search".to_string(),
+                input_schema: json!({"type": "object", "properties": {}}),
+                output_schema: None,
+                execution: ToolExecutionKind::ProviderNative,
+                metadata: Default::default(),
+            }],
+        )
+        .await
+        .expect_err("provider-native tool should be rejected by capabilities");
+
+    assert_eq!(
+        error.kind,
+        logos_runtime_types::ProviderErrorKind::UnsupportedCapability
+    );
+    assert!(
+        error
+            .message
+            .contains("provider-native tool 'provider_search'")
     );
 }
 
@@ -369,6 +474,19 @@ struct FailTool;
 impl RuntimeToolExecutor for FailTool {
     async fn execute(&self, _arguments: Value) -> Result<Value, String> {
         Err("tool exploded".to_string())
+    }
+}
+
+struct DenyApprover;
+
+#[async_trait]
+impl ToolApprover for DenyApprover {
+    async fn decide(
+        &self,
+        _request: &ToolApprovalRequest,
+        _mode: ToolApprovalMode,
+    ) -> ToolApprovalOutcome {
+        ToolApprovalOutcome::Denied
     }
 }
 

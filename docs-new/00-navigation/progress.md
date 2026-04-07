@@ -5,12 +5,7 @@ type: utility
 status: active
 tags: [progress, changelog, logos]
 related:
-  [
-    [validation.md],
-    [inventory.json],
-    [INDEX.md],
-    [../07-logos-phase/README.md]
-  ]
+  [[validation.md], [inventory.json], [INDEX.md], [../07-logos-phase/README.md]]
 depends_on: []
 generated: false
 source_of_truth: progress
@@ -64,6 +59,10 @@ outline: []
 9. Added a canonical acceptance report plus a working note that document the delivered slice, the preserved OpenAI wrapper seam, the registered Prompt seam, and the remaining runtime-loop limitations.
 10. Extended the phase-1 slice with runtime-owned tool execution and `ToolResult` reinjection inside `logos-session-engine` and `logos-tool-runtime`, and added focused roundtrip and error-path tests.
 11. Added a `notes/devlog/` practice and stored branch and PR summaries there so future agents can recover implementation intent quickly.
+12. Completed the phase-1 hardening pass with explicit approval events, policy-aware runtime execution, and capability-gated provider-native tool rejection without adding another Codex-core seam.
+13. Added a second narrow seam for explicit OpenAI continuation carryover, stabilized the adapter around fresh per-turn `ModelClientSession` creation, and removed duplicate normalized tool/reasoning emissions.
+14. Added a dedicated compaction-strategy discussion doc, linked it into the architecture hub and roadmap, and explicitly placed portable multi-provider compaction work in the persistence/resume phase while preserving the canonical OpenAI path earlier.
+15. Added an architecture-first phase-2 discussion/spec pair for the OpenAI canonical turn loop so the next phase starts from explicit ownership boundaries instead of ad hoc refactoring.
 
 ## Deferred
 

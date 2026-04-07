@@ -13,7 +13,10 @@ use logos_runtime_types::ProviderError;
 pub type ProviderEventStream =
     Pin<Box<dyn Stream<Item = Result<InternalEvent, ProviderError>> + Send>>;
 
-/// Provider-owned streaming session that preserves transport-specific state across turns.
+/// Provider-owned streaming wrapper for one LOGOS session.
+///
+/// Implementations may keep lightweight adapter state, but must not assume the underlying
+/// provider transport session is valid across multiple turns unless the provider contract says so.
 #[async_trait]
 pub trait ProviderSession: Send {
     async fn stream_turn(

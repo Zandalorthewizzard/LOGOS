@@ -25,4 +25,8 @@ pub use model::ModelMeta;
 pub use model::ModelRef;
 pub use model::ProviderId;
 pub use tools::InternalToolDef;
+pub use tools::ToolApprovalMode;
+pub use tools::ToolApprovalOutcome;
+pub use tools::ToolApprovalRequest;
 pub use tools::ToolExecutionKind;
+pub use tools::ToolExecutionPolicy;

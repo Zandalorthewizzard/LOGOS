@@ -5,6 +5,9 @@ use async_trait::async_trait;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
 use logos_runtime_types::InternalToolDef;
+use logos_runtime_types::ToolApprovalMode;
+use logos_runtime_types::ToolApprovalOutcome;
+use logos_runtime_types::ToolApprovalRequest;
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +57,8 @@ impl ToolCallCollector {
                 }
             }
             InternalEvent::ToolCallFinished { .. }
+            | InternalEvent::ApprovalRequested { .. }
+            | InternalEvent::ApprovalResolved { .. }
             | InternalEvent::MessageStarted { .. }
             | InternalEvent::TextDelta { .. }
             | InternalEvent::MessageCompleted { .. }
@@ -84,6 +89,33 @@ pub trait RuntimeToolExecutor: Send + Sync {
     async fn execute(&self, arguments: Value) -> Result<Value, String>;
 }
 
+#[async_trait]
+pub trait ToolApprover: Send + Sync {
+    async fn decide(
+        &self,
+        request: &ToolApprovalRequest,
+        mode: ToolApprovalMode,
+    ) -> ToolApprovalOutcome;
+}
+
+pub struct PolicyApprover;
+
+#[async_trait]
+impl ToolApprover for PolicyApprover {
+    async fn decide(
+        &self,
+        _request: &ToolApprovalRequest,
+        mode: ToolApprovalMode,
+    ) -> ToolApprovalOutcome {
+        match mode {
+            ToolApprovalMode::AutoApprove => ToolApprovalOutcome::Approved,
+            ToolApprovalMode::RequireApproval | ToolApprovalMode::Deny => {
+                ToolApprovalOutcome::Denied
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 struct RegisteredRuntimeTool {
     def: InternalToolDef,
@@ -103,6 +135,10 @@ impl ToolRuntime {
 
     pub fn declared_tools(&self) -> Vec<InternalToolDef> {
         self.tools.values().map(|tool| tool.def.clone()).collect()
+    }
+
+    pub fn tool_def(&self, name: &str) -> Option<InternalToolDef> {
+        self.tools.get(name).map(|tool| tool.def.clone())
     }
 
     pub async fn execute_call(&self, call: &PendingToolCall) -> Option<InternalMessage> {

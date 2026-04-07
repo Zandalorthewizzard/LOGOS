@@ -16,5 +16,8 @@ logos-provider-api = { workspace = true }
 logos-runtime-types = { workspace = true }
 serde_json = { workspace = true }
 
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
 [lints]
 workspace = true

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_stream::try_stream;
 use async_trait::async_trait;
 use codex_core::ModelClient;
-use codex_core::ModelClientSession;
 use codex_otel::SessionTelemetry;
 use codex_protocol::config_types::ReasoningSummary;
 use codex_protocol::config_types::ServiceTier;
@@ -53,7 +52,6 @@ impl OpenAiAdapter {
 }
 
 struct OpenAiSession {
-    session: ModelClientSession,
     config: Arc<OpenAiAdapterConfig>,
 }
 
@@ -69,7 +67,9 @@ impl ProviderAdapter for OpenAiAdapter {
             supports_client_side_history: true,
             supports_structured_output: true,
             supports_context_cache: false,
+            supports_runtime_owned_tools: true,
             supports_provider_builtin_tools: true,
+            supports_approval_control: true,
             supports_compaction: true,
             continuation_mode: ContinuationMode::ServerManaged,
         }
@@ -80,6 +80,8 @@ impl ProviderAdapter for OpenAiAdapter {
             supports_tool_calling: true,
             supports_parallel_tools: true,
             supports_tool_arg_streaming: true,
+            supports_provider_native_tool_calls: false,
+            supports_runtime_tool_reinjection: true,
             supports_reasoning_deltas: true,
             supports_opaque_reasoning_carryover: true,
             supports_images: true,
@@ -102,7 +104,6 @@ impl ProviderAdapter for OpenAiAdapter {
 
     async fn new_session(&self) -> Result<Box<dyn ProviderSession>, ProviderError> {
         Ok(Box::new(OpenAiSession {
-            session: self.config.client.new_session(),
             config: Arc::clone(&self.config),
         }))
     }
@@ -115,8 +116,8 @@ impl ProviderSession for OpenAiSession {
         request: InternalTurnRequest,
     ) -> Result<ProviderEventStream, ProviderError> {
         let prompt = map_turn_request(&request)?;
-        let stream = self
-            .session
+        let mut session = self.config.client.new_session();
+        let stream = session
             .stream(
                 &prompt,
                 &self.config.model_info,
