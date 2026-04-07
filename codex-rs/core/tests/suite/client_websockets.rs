@@ -1449,6 +1449,37 @@ async fn responses_websocket_v2_creates_without_previous_response_id_when_non_in
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn responses_websocket_v2_uses_explicit_previous_response_id_without_incremental_carryover() {
+    skip_if_no_network!();
+
+    let server = start_websocket_server(vec![vec![vec![
+        ev_response_created("resp-2"),
+        ev_completed("resp-2"),
+    ]]])
+    .await;
+
+    let harness = websocket_harness_with_v2(&server, /*runtime_metrics_enabled*/ true).await;
+    let mut session = harness.client.new_session();
+    let mut prompt = prompt_with_input(vec![message_item("full history")]);
+    prompt.previous_response_id = Some("resp-1".to_string());
+
+    stream_until_complete(&mut session, &harness, &prompt).await;
+
+    let connection = server.single_connection();
+    assert_eq!(connection.len(), 1);
+    let first = connection.first().expect("missing request").body_json();
+
+    assert_eq!(first["type"].as_str(), Some("response.create"));
+    assert_eq!(first["previous_response_id"].as_str(), Some("resp-1"));
+    assert_eq!(
+        first["input"],
+        serde_json::to_value(&prompt.input).expect("serialize full input")
+    );
+
+    server.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn responses_websocket_v2_after_error_uses_full_create_without_previous_response_id() {
     skip_if_no_network!();
 

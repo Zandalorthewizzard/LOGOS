@@ -735,6 +735,7 @@ impl ModelClientSession {
         let request = ResponsesApiRequest {
             model: model_info.slug.clone(),
             instructions: instructions.clone(),
+            previous_response_id: prompt.previous_response_id.clone(),
             input,
             tools,
             tool_choice: "auto".to_string(),
@@ -833,6 +834,10 @@ impl ModelClientSession {
         payload: ResponseCreateWsRequest,
         request: &ResponsesApiRequest,
     ) -> ResponsesWsRequest {
+        if payload.previous_response_id.is_some() {
+            return ResponsesWsRequest::ResponseCreate(payload);
+        }
+
         let Some(last_response) = self.get_last_response() else {
             return ResponsesWsRequest::ResponseCreate(payload);
         };

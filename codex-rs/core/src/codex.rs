@@ -6478,6 +6478,7 @@ pub(crate) fn build_prompt(
 
     Prompt {
         input,
+        previous_response_id: None,
         tools,
         parallel_tool_calls: turn_context.model_info.supports_parallel_tool_calls,
         base_instructions,

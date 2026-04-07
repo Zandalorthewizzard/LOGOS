@@ -6022,6 +6022,7 @@ dependencies = [
  "futures",
  "logos-provider-api",
  "logos-runtime-types",
+ "pretty_assertions",
  "serde_json",
 ]
 

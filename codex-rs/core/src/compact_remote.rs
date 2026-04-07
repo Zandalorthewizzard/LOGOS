@@ -107,6 +107,7 @@ async fn run_remote_compact_task_inner_impl(
     .await?;
     let prompt = Prompt {
         input: prompt_input,
+        previous_response_id: None,
         tools: tool_router.model_visible_specs(),
         parallel_tool_calls: turn_context.model_info.supports_parallel_tool_calls,
         base_instructions,

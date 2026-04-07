@@ -19,6 +19,7 @@ fn serializes_text_verbosity_when_set() {
     let req = ResponsesApiRequest {
         model: "gpt-5.1".to_string(),
         instructions: "i".to_string(),
+        previous_response_id: None,
         input,
         tools,
         tool_choice: "auto".to_string(),
@@ -62,6 +63,7 @@ fn serializes_text_schema_with_strict_format() {
     let req = ResponsesApiRequest {
         model: "gpt-5.1".to_string(),
         instructions: "i".to_string(),
+        previous_response_id: None,
         input,
         tools,
         tool_choice: "auto".to_string(),
@@ -99,6 +101,7 @@ fn omits_text_when_not_set() {
     let req = ResponsesApiRequest {
         model: "gpt-5.1".to_string(),
         instructions: "i".to_string(),
+        previous_response_id: None,
         input,
         tools,
         tool_choice: "auto".to_string(),
@@ -121,6 +124,7 @@ fn serializes_flex_service_tier_when_set() {
     let req = ResponsesApiRequest {
         model: "gpt-5.1".to_string(),
         instructions: "i".to_string(),
+        previous_response_id: None,
         input: vec![],
         tools: vec![],
         tool_choice: "auto".to_string(),
@@ -228,4 +232,14 @@ fn prompt_accepts_external_configured_tools() {
     assert!(prompt.parallel_tool_calls_enabled());
     assert_eq!(prompt.configured_tools().len(), 1);
     assert_eq!(prompt.configured_tools()[0].name(), "logos_tool");
+}
+
+#[test]
+fn prompt_stores_explicit_previous_response_id() {
+    let prompt = Prompt {
+        previous_response_id: Some("resp-123".to_string()),
+        ..Prompt::default()
+    };
+
+    assert_eq!(prompt.previous_response_id.as_deref(), Some("resp-123"));
 }

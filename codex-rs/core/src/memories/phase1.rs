@@ -334,6 +334,7 @@ mod job {
                 end_turn: None,
                 phase: None,
             }],
+            previous_response_id: None,
             tools: Vec::new(),
             parallel_tool_calls: false,
             base_instructions: BaseInstructions {

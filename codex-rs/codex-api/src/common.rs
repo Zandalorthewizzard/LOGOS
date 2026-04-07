@@ -154,6 +154,8 @@ impl From<VerbosityConfig> for OpenAiVerbosity {
 pub struct ResponsesApiRequest {
     pub model: String,
     pub instructions: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_response_id: Option<String>,
     pub input: Vec<ResponseItem>,
     pub tools: Vec<serde_json::Value>,
     pub tool_choice: String,
@@ -175,7 +177,7 @@ impl From<&ResponsesApiRequest> for ResponseCreateWsRequest {
         Self {
             model: request.model.clone(),
             instructions: request.instructions.clone(),
-            previous_response_id: None,
+            previous_response_id: request.previous_response_id.clone(),
             input: request.input.clone(),
             tools: request.tools.clone(),
             tool_choice: request.tool_choice.clone(),
@@ -277,5 +279,35 @@ impl Stream for ResponseStream {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.rx_event.poll_recv(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ResponseCreateWsRequest;
+    use super::ResponsesApiRequest;
+
+    #[test]
+    fn websocket_conversion_preserves_previous_response_id() {
+        let request = ResponsesApiRequest {
+            model: "gpt-5".to_string(),
+            instructions: "be helpful".to_string(),
+            previous_response_id: Some("resp-1".to_string()),
+            input: Vec::new(),
+            tools: Vec::new(),
+            tool_choice: "auto".to_string(),
+            parallel_tool_calls: false,
+            reasoning: None,
+            store: false,
+            stream: true,
+            include: Vec::new(),
+            service_tier: None,
+            prompt_cache_key: None,
+            text: None,
+        };
+
+        let ws_request = ResponseCreateWsRequest::from(&request);
+
+        assert_eq!(ws_request.previous_response_id.as_deref(), Some("resp-1"));
     }
 }

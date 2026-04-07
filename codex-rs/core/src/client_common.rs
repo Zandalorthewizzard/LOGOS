@@ -29,6 +29,9 @@ pub struct Prompt {
     /// Conversation context input items.
     pub input: Vec<ResponseItem>,
 
+    /// Explicit server-managed continuation handle for providers that accept a prior response id.
+    pub previous_response_id: Option<String>,
+
     /// Tools available to the model, including additional tools sourced from
     /// external MCP servers.
     pub(crate) tools: Vec<ToolSpec>,
