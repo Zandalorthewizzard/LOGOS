@@ -678,6 +678,18 @@ impl Drop for ModelClientSession {
 }
 
 impl ModelClientSession {
+    pub fn set_turn_state(&mut self, turn_state: Option<String>) {
+        self.turn_state = Arc::new(OnceLock::new());
+        if let Some(turn_state) = turn_state {
+            let _ = self.turn_state.set(turn_state);
+        }
+        self.reset_websocket_session();
+    }
+
+    pub fn current_turn_state(&self) -> Option<String> {
+        self.turn_state.get().cloned()
+    }
+
     fn reset_websocket_session(&mut self) {
         self.websocket_session.connection = None;
         self.websocket_session.last_request = None;
