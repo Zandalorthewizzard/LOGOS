@@ -11,13 +11,13 @@ related:
     [2026-04-02-logos-provider-openai-adapter-spec.md],
     [2026-04-02-logos-persistence-resume-architecture-spec.md],
     [2026-04-02-logos-capability-model-architecture-spec.md],
-    [../implementation/2026-03-30-logos-global-roadmap.md]
+    [../implementation/2026-03-30-logos-global-roadmap.md],
   ]
 depends_on:
   [
     [2026-04-02-logos-adapter-kernel-architecture.md],
     [2026-04-02-logos-provider-openai-adapter-spec.md],
-    [2026-04-02-logos-persistence-resume-architecture-spec.md]
+    [2026-04-02-logos-persistence-resume-architecture-spec.md],
   ]
 generated: false
 source_of_truth: working-doc
@@ -40,10 +40,11 @@ outline: []
   2. provider-specific compaction backend selection
   3. history replacement and context reinjection
 - In current Codex base, remote compaction backend choice is effectively hard-coded to OpenAI provider detection.
-- In current LOGOS runtime types, `supports_compaction: bool` is too weak to represent the real difference between:
+- The earlier LOGOS runtime capability shape used a single `supports_compaction: bool`, which was too weak to represent the real difference between:
   1. provider-native remote history rewrite
   2. portable Logos-side summary checkpoint compaction
   3. no compaction support
+- The current phase-2 starting point now introduces explicit backend classification, but that is only the first handoff surface and not the full compaction implementation.
 
 ## Current Codex Behavior
 
@@ -101,8 +102,8 @@ outline: []
 
 ## Recommended Capability Direction
 
-- The current provider capability flag `supports_compaction` should not be treated as the final model.
-- Later strict spec work should replace or extend it with an explicit compaction backend classification.
+- The current provider compaction capability shape should be treated as an honest first classification, not the final full policy model.
+- Later strict spec work should build on it with explicit session policy and backend selection semantics.
 - The minimum honest classification needed by LOGOS is:
   1. native remote history rewrite
   2. portable summary checkpoint
@@ -190,7 +191,7 @@ outline: []
   lines: `239-239`
 - path: `../../../codex-rs/logos-runtime-types/src/capabilities.rs`
   symbol: `ProviderCapabilitySet`
-  lines: `7-16`
+  lines: `7-23`
 - path: `../../../codex-rs/logos-provider-openai/src/adapter.rs`
   symbol: `provider_capabilities`
   lines: `64-75`

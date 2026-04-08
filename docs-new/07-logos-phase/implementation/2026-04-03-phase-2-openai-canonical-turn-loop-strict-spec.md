@@ -78,7 +78,7 @@ Non-goals:
 
 - package: `codex-rs/core`, `codex-rs/codex-api`
 - files: continuation/turn-state/compaction touch points identified by the phase-2 discussion
-- output: only the minimum registered seams needed for canonical turn preservation, if any
+- output: only the minimum registered seams needed for canonical turn preservation, if any, plus honest compaction or turn-state handoff surfaces where no seam is required
 
 3. `T3`
 
@@ -90,7 +90,7 @@ Non-goals:
 
 - package: `codex-rs/logos-session-engine`
 - files: normalized turn orchestration integration points
-- output: phase-2-safe orchestration that preserves canonical OpenAI behavior and exposes later persistence hooks
+- output: phase-2-safe orchestration that preserves canonical OpenAI behavior and exposes later persistence hooks such as capability-backed compaction handoff points
 
 5. `T5`
 
@@ -103,16 +103,18 @@ Non-goals:
 | Requirement                                                                | Task IDs               | Tests                                 | Acceptance | Gates |
 | -------------------------------------------------------------------------- | ---------------------- | ------------------------------------- | ---------- | ----- |
 | Canonical continuation remains explicit and lifecycle-correct              | `T2`, `T3`, `T5`       | focused continuation tests            | `A1`       | `G1`  |
-| Stream ordering and terminal semantics remain canonical                    | `T3`, `T4`, `T5`       | focused event-order tests             | `A2`       | `G2`  |
-| OpenAI compaction path is preserved without shared-architecture distortion | `T1`, `T2`, `T3`, `T5` | focused compaction preservation tests | `A3`       | `G3`  |
-| Later persistence/resume work has explicit handoff hooks                   | `T1`, `T4`             | docs + code ownership review          | `A4`       | `G4`  |
+| Turn-state preservation remains canonical within logical turns             | `T2`, `T3`, `T4`, `T5` | focused turn-state tests              | `A2`       | `G2`  |
+| Stream ordering and terminal semantics remain canonical                    | `T3`, `T4`, `T5`       | focused event-order tests             | `A3`       | `G3`  |
+| OpenAI compaction path is preserved without shared-architecture distortion | `T1`, `T2`, `T3`, `T5` | focused compaction preservation tests | `A4`       | `G4`  |
+| Later persistence/resume work has explicit handoff hooks                   | `T1`, `T4`             | docs + code ownership review          | `A5`       | `G5`  |
 
 ## Acceptance and Tests
 
 1. focused OpenAI continuation tests pass
-2. focused OpenAI stream ordering and completion tests pass
-3. focused OpenAI compaction preservation tests pass
-4. any new Codex-base seam is registered in the seam index and introduced in a dedicated commit
+2. focused turn-state preservation tests pass
+3. focused OpenAI stream ordering and completion tests pass
+4. focused OpenAI compaction preservation tests pass
+5. any new Codex-base seam is registered in the seam index and introduced in a dedicated commit
 
 ## Promotion Artifacts
 

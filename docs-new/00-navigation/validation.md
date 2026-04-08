@@ -152,6 +152,26 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 
 - verified by `../07-logos-phase/architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md` and `../07-logos-phase/implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md`.
 
+34. The first phase-2 implementation step now classifies OpenAI compaction honestly as a native remote rewrite backend and exposes provider/model capability handoff points through the session engine.
+
+- verified by `../../../codex-rs/logos-runtime-types/src/capabilities.rs`, `../../../codex-rs/logos-provider-openai/src/adapter.rs`, and `../../../codex-rs/logos-session-engine/src/session.rs`.
+
+35. The phase-2 preservation lane now carries `x-codex-turn-state` across fresh request-scoped OpenAI sessions within one logical turn, while still resetting that state between logical turns.
+
+- verified by `../../../codex-rs/core/src/client.rs`, `../../../codex-rs/logos-provider-openai/src/adapter.rs`, and `../../../codex-rs/logos-session-engine/tests/phase1_boundary.rs`.
+
+36. The phase-2 preservation lane now preserves the canonical OpenAI remote compaction fast path through a normalized session-engine handoff instead of introducing premature portable compaction.
+
+- verified by `../../../codex-rs/logos-provider-api/src/provider.rs`, `../../../codex-rs/logos-provider-openai/src/adapter.rs`, `../../../codex-rs/logos-provider-openai/src/map_history.rs`, `../../../codex-rs/logos-session-engine/src/session.rs`, and `../../../codex-rs/logos-session-engine/tests/phase1_boundary.rs`.
+
+37. LOGOS now has a phase-2 acceptance report for the canonical OpenAI turn-loop preservation lane.
+
+- verified by `../07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md`.
+
+34. The first phase-2 implementation step now classifies OpenAI compaction honestly as a native remote rewrite backend and exposes provider/model capability handoff points through the session engine.
+
+- verified by `../../../codex-rs/logos-runtime-types/src/capabilities.rs`, `../../../codex-rs/logos-provider-openai/src/adapter.rs`, and `../../../codex-rs/logos-session-engine/src/session.rs`.
+
 ## Open / Deferred
 
 1. `UNKNOWN`: the long-term placement strategy for future provider-specific deep dives.
@@ -171,6 +191,8 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 15. Deferred: durable approval journaling/resume reconstruction and later provider-native fast-path design still need their own follow-on phase work.
 16. Deferred: a strict implementation spec for multi-provider compaction policy and backend classification is still not written; only the architecture discussion and roadmap placement are now locked.
 17. Deferred: phase-2 implementation and acceptance artifacts are still not written; only the architecture-first foundation is now locked.
+18. Deferred: follow-on phases still need durable journal/resume and portable multi-provider compaction work beyond the completed canonical OpenAI preservation scope.
+19. Deferred: phase-2 still needs focused work on canonical turn-state and compaction preservation behavior beyond the initial capability and handoff slice.
 
 ## Evidence
 

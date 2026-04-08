@@ -4,6 +4,13 @@ use serde::Serialize;
 use crate::continuation::ContinuationMode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompactionBackendKind {
+    Disabled,
+    NativeRemoteRewrite,
+    PortableCheckpoint,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProviderCapabilitySet {
     pub supports_server_side_state: bool,
     pub supports_client_side_history: bool,
@@ -12,7 +19,7 @@ pub struct ProviderCapabilitySet {
     pub supports_runtime_owned_tools: bool,
     pub supports_provider_builtin_tools: bool,
     pub supports_approval_control: bool,
-    pub supports_compaction: bool,
+    pub compaction_backend: CompactionBackendKind,
     pub continuation_mode: ContinuationMode,
 }
 

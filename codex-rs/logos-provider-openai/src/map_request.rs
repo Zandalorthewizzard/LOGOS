@@ -42,7 +42,7 @@ fn map_continuation(request: &InternalTurnRequest) -> Result<Option<String>, Pro
     }
 }
 
-fn map_tool_def(tool: &InternalToolDef) -> Result<ConfiguredToolSpec, ProviderError> {
+pub(crate) fn map_tool_def(tool: &InternalToolDef) -> Result<ConfiguredToolSpec, ProviderError> {
     if tool.execution == ToolExecutionKind::ProviderNative {
         return Err(ProviderError::new(
             OPENAI_PROVIDER_ID,

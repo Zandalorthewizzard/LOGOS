@@ -311,6 +311,14 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-phase-2-openai-canonical-turn-loop-acceptance-report",
+      "path": "07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md",
+      "type": "report",
+      "focus": ["acceptance report", "phase 2", "openai canonical turn loop"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-openrouter-validation-adapter-strict-spec",
       "path": "07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md",
       "type": "spec",

@@ -35,6 +35,9 @@ fn map_message(message: &InternalMessage) -> ResponseItem {
             arguments: arguments.to_string(),
             call_id: call_id.clone(),
         },
+        InternalMessage::CompactionCheckpoint { summary } => ResponseItem::Compaction {
+            encrypted_content: summary.clone(),
+        },
         InternalMessage::ToolResult {
             call_id,
             output,

@@ -45,6 +45,9 @@ related:
     [
       implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md,
     ],
+    [
+      implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md,
+    ],
     [implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [implementation/2026-04-02-codex-base-repository-strategy.md],
     [implementation/2026-04-02-upstream-sync-policy.md],
@@ -104,8 +107,9 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 37. [[implementation/2026-04-03-codex-core-seam-index.md]]
 38. [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 39. [[implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
-40. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
-41. [[research/2026-03-30-logos-research-requirements.md]]
+40. [[implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
+41. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
+42. [[research/2026-03-30-logos-research-requirements.md]]
 
 ## Folder Layout
 
@@ -170,6 +174,7 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 - [[implementation/2026-04-03-codex-core-seam-index.md]]
 - [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 - [[implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
+- [[implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
 - [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[implementation/2026-04-02-codex-base-repository-strategy.md]]
 - [[implementation/2026-04-02-upstream-sync-policy.md]]

@@ -32,6 +32,13 @@
 
 - created an architecture-first discussion/spec pair for `Phase 2: OpenAI Canonical Turn Loop`
 - phase-2 is now framed as preservation of canonical OpenAI turn/session/compaction behavior, not as a pretext for broad refactoring
+- started implementation with honest compaction-backend classification and explicit turn-state transfer for fresh request-scoped sessions inside one logical turn
+- preserved the canonical OpenAI remote compaction fast path through a normalized session-engine handoff and added a phase-2 acceptance report
+
+## Phase-2 Status
+
+- phase-2 is logically complete for the current canonical OpenAI turn-loop preservation scope
+- later persistence/resume and multi-provider compaction work remain explicitly deferred to later phases
 
 ## Resume Point
 

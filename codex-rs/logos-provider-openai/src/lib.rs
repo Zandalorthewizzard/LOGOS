@@ -1,6 +1,7 @@
 mod adapter;
 mod extensions;
 mod map_events;
+mod map_history;
 mod map_messages;
 mod map_request;
 

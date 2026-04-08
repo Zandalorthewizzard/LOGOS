@@ -84,12 +84,19 @@ outline: []
 - cached websocket carryover is still allowed, but only as a within-turn transport optimization subordinate to explicit request state
 - phase-2 should treat continuation as a canonical adapter/session seam, not as hidden transport state
 
+## Turn-State Position
+
+- `x-codex-turn-state` remains an OpenAI/Codex-native sticky-routing contract, not a shared runtime abstraction
+- phase-2 may use a narrow Codex-base seam to transfer turn-state between fresh request-scoped sessions inside one logical LOGOS turn
+- the purpose of that seam is preservation, not re-ownership: LOGOS must not reimplement sticky-routing policy itself
+
 ## Compaction Position
 
 - OpenAI remote compaction remains canonical and preserved
 - the top-level compaction policy belongs to LOGOS session/runtime ownership, not provider-name branching baked into future shared architecture
 - phase-2 should preserve current OpenAI compaction semantics and isolate them cleanly enough that phase-4 persistence/resume work can add durable checkpoint behavior without another broad turn-loop rewrite
 - `2026-04-03-logos-compaction-strategy-discussion.md` should be treated as a required companion design lock for phase-2 planning
+- the first safe phase-2 code move is an honest compaction-backend classification plus session capability handoff, not premature portable compaction implementation
 
 ## Recommended Ownership Boundaries
 

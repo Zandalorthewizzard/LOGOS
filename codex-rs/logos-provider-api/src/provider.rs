@@ -2,6 +2,8 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use futures::Stream;
+use logos_runtime_types::InternalCompactionRequest;
+use logos_runtime_types::InternalCompactionResult;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalTurnRequest;
 use logos_runtime_types::ModelCapabilitySet;
@@ -23,6 +25,10 @@ pub trait ProviderSession: Send {
         &mut self,
         request: InternalTurnRequest,
     ) -> Result<ProviderEventStream, ProviderError>;
+
+    async fn finish_turn(&mut self) -> Result<(), ProviderError> {
+        Ok(())
+    }
 }
 
 /// Adapter contract for a Logos provider implementation.
@@ -35,6 +41,11 @@ pub trait ProviderAdapter: Send + Sync {
     fn model_capabilities(&self, model: &ModelRef) -> ModelCapabilitySet;
 
     async fn list_models(&self) -> Result<Vec<ModelMeta>, ProviderError>;
+
+    async fn compact_history(
+        &self,
+        request: InternalCompactionRequest,
+    ) -> Result<InternalCompactionResult, ProviderError>;
 
     async fn new_session(&self) -> Result<Box<dyn ProviderSession>, ProviderError>;
 }

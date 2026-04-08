@@ -96,6 +96,31 @@ This index records every intentional LOGOS intervention in `codex-rs/core/` or e
 - upstream_conflict_risk: `medium`; this seam touches central request structs and websocket request preparation, but remains additive and tightly scoped to explicit continuation carryover.
 - rollback_or_replace_path: if upstream later exposes a public explicit continuation field on prompt/request builders, migrate LOGOS to that surface and retire this seam.
 
+### SEAM-2026-04-07-03 Turn-State Transfer Hook
+
+- status: `active`
+- introduced_by_commit: `21a3887d3`
+- area: `codex-rs/core/src/client.rs`
+- why_needed: phase-2 needs fresh `ModelClientSession` instances per request while still preserving canonical within-turn sticky-routing behavior. Without a narrow hook, `x-codex-turn-state` would be trapped inside one private turn-scoped client session and could not be carried across fresh request sessions within the same logical LOGOS turn.
+- minimal_scope:
+  1. add `ModelClientSession::set_turn_state`
+  2. add `ModelClientSession::current_turn_state`
+- affected_files:
+  1. `codex-rs/core/src/client.rs`
+  2. `codex-rs/logos-provider-openai/src/adapter.rs`
+  3. `codex-rs/logos-session-engine/tests/phase1_boundary.rs`
+- public_surface_added:
+  1. `ModelClientSession::set_turn_state`
+  2. `ModelClientSession::current_turn_state`
+- consuming_logos_crates:
+  1. `codex-rs/logos-provider-openai`
+- non_goals:
+  1. no broad redesign of websocket session reuse in `codex-core`
+  2. no promotion of turn-state into shared LOGOS runtime contracts
+  3. no attempt to make OpenAI sticky-routing behavior provider-neutral
+- upstream_conflict_risk: `medium`; this seam touches the central turn-scoped client session type, but remains narrow and focused on explicit turn-state transfer.
+- rollback_or_replace_path: if upstream later exposes an equivalent public turn-state transfer hook, migrate LOGOS to it and retire this seam.
+
 ## Evidence
 
 - equivalent: `git show --stat --summary 983795862`
@@ -114,6 +139,12 @@ This index records every intentional LOGOS intervention in `codex-rs/core/` or e
 - path: `../../../codex-rs/codex-api/src/common.rs`
   symbol: `ResponsesApiRequest`
   lines: `153-194`
+- path: `../../../codex-rs/core/src/client.rs`
+  symbol: `ModelClientSession::set_turn_state`
+  lines: `681-699`
+- path: `../../../codex-rs/core/src/client.rs`
+  symbol: `ModelClientSession::current_turn_state`
+  lines: `690-692`
 
 ## Links
 

@@ -10,13 +10,13 @@ related:
     [2026-04-02-phase-1-boundary-extraction-strict-spec.md],
     [2026-03-30-logos-phase-1-implementation-slice.md],
     [../architecture/2026-04-02-logos-provider-openai-adapter-spec.md],
-    [../../../notes/2026-04-03-phase-1-boundary-extraction.md]
+    [../../../notes/2026-04-03-phase-1-boundary-extraction.md],
   ]
 depends_on:
   [
     [2026-04-02-phase-1-boundary-extraction-strict-spec.md],
     [../architecture/2026-04-02-logos-adapter-kernel-architecture.md],
-    [../architecture/2026-04-02-logos-tool-loop-architecture-spec.md]
+    [../architecture/2026-04-02-logos-tool-loop-architecture-spec.md],
   ]
 generated: false
 source_of_truth: working-doc
@@ -47,6 +47,7 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 6. Approval decisions are now explicit normalized control-flow events instead of hidden execution side effects.
 7. Shared runtime crates do not export raw OpenAI wire structs as the shared runtime contract.
 8. OpenAI continuation now travels through an explicit request seam instead of cross-turn `ModelClientSession` reuse.
+9. OpenAI capability claims now match the normalized boundary, including `supports_tool_arg_streaming = false`.
 
 ## Boundary Shape
 
@@ -58,7 +59,7 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 
 ### OpenAI Wrapper
 
-- `logos-provider-openai` wraps `codex_core::ModelClientSession` instead of rewriting the Codex/OpenAI path.
+- `logos-provider-openai` wraps the canonical `codex_core::ModelClientSession` turn path instead of rewriting the Codex/OpenAI transport.
 - Request mapping stays adapter-local.
 - Response and stream mapping stay adapter-local.
 - The shared runtime only sees normalized `InternalEvent` and `InternalMessage` values.
@@ -85,7 +86,7 @@ This report records the delivered phase-1 boundary extraction slice for the curr
 ### A3. OpenAI continuation handle survives boundary
 
 - Met.
-- `continuation_handle_is_preserved_for_follow_up_turn` proves the adapter emits a continuation update and the second turn reuses the preserved handle through the same provider session.
+- `continuation_handle_is_preserved_for_follow_up_turn` proves the adapter emits a continuation update and the second turn reuses the preserved handle through an explicit request seam rather than hidden session reuse.
 
 ### A4. Tool boundary exists with stable IDs
 
@@ -120,11 +121,12 @@ Out of scope for this phase and deferred to later phases or follow-on specs:
 
 ## Why Codex-Base Changes Stayed Minimal
 
-The implementation uses one narrow registered Codex-core seam plus additive crates.
+The implementation uses two narrow registered Codex-base seams plus additive crates.
 
 1. `codex_core::ModelClientSession` still provides the primary OpenAI streaming seam.
-2. The only direct Codex-core intervention is the Prompt helper seam recorded in `2026-04-03-codex-core-seam-index.md`.
-3. The adapter still owns request mapping, event mapping, and session-engine ownership outside `codex-core`.
+2. The Prompt helper seam opens external tool declaration wiring without exposing deeper prompt internals.
+3. The explicit continuation seam carries `previous_response_id` through prompt/API/websocket request objects so LOGOS no longer depends on illegal cross-turn session reuse.
+4. The adapter still owns request mapping, event mapping, and session-engine ownership outside `codex-core`.
 
 ## Tests Run
 
@@ -146,8 +148,7 @@ The implementation uses one narrow registered Codex-core seam plus additive crat
 
 1. Carry approval artifacts into future durable journal/resume layers when that phase is opened.
 2. Define provider-native fast-path policy for later non-OpenAI adapters.
-3. Revisit whether any second seam is needed only if later phases prove execution metadata cannot stay outside `codex-core`.
-4. Replace `PENDING_LOCAL_COMMIT` in the seam index with the dedicated continuation-seam commit hash when the local stabilization commit is created.
+3. Revisit whether any third seam is needed only if later phases prove execution metadata or compaction preservation cannot stay outside `codex-core`.
 
 ## Evidence
 

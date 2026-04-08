@@ -1,4 +1,5 @@
 pub mod capabilities;
+pub mod compaction;
 pub mod continuation;
 pub mod errors;
 pub mod events;
@@ -6,8 +7,11 @@ pub mod message;
 pub mod model;
 pub mod tools;
 
+pub use capabilities::CompactionBackendKind;
 pub use capabilities::ModelCapabilitySet;
 pub use capabilities::ProviderCapabilitySet;
+pub use compaction::InternalCompactionRequest;
+pub use compaction::InternalCompactionResult;
 pub use continuation::ContinuationHandle;
 pub use continuation::ContinuationMode;
 pub use errors::ProviderError;

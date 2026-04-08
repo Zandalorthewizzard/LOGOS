@@ -54,6 +54,9 @@ pub enum InternalMessage {
         name: String,
         arguments: Value,
     },
+    CompactionCheckpoint {
+        summary: String,
+    },
     ToolResult {
         call_id: CallId,
         output: Value,

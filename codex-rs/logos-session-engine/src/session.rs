@@ -31,6 +31,7 @@ use crate::tool_loop::tool_messages_from_events;
 use crate::turn::TurnOutcome;
 
 pub struct SessionEngine {
+    adapter: Arc<dyn ProviderAdapter>,
     provider_session: Box<dyn ProviderSession>,
     provider_capabilities: ProviderCapabilitySet,
     model_capabilities: ModelCapabilitySet,
@@ -51,8 +52,10 @@ impl SessionEngine {
     ) -> Result<Self, ProviderError> {
         let provider_capabilities = adapter.provider_capabilities();
         let model_capabilities = adapter.model_capabilities(&model_ref);
+        let provider_session = adapter.new_session().await?;
         Ok(Self {
-            provider_session: adapter.new_session().await?,
+            adapter,
+            provider_session,
             provider_capabilities,
             model_capabilities,
             model_ref,
@@ -85,8 +88,47 @@ impl SessionEngine {
         self.continuation.as_ref()
     }
 
+    pub fn provider_capabilities(&self) -> &ProviderCapabilitySet {
+        &self.provider_capabilities
+    }
+
+    pub fn model_capabilities(&self) -> &ModelCapabilitySet {
+        &self.model_capabilities
+    }
+
     pub fn history(&self) -> &[InternalMessage] {
         &self.history
+    }
+
+    pub async fn compact_history(&mut self) -> Result<(), ProviderError> {
+        match self.provider_capabilities.compaction_backend {
+            logos_runtime_types::CompactionBackendKind::Disabled => Err(ProviderError::new(
+                self.model_ref.provider_id.clone(),
+                ProviderErrorKind::UnsupportedCapability,
+                "provider does not support compaction",
+            )),
+            logos_runtime_types::CompactionBackendKind::PortableCheckpoint => {
+                Err(ProviderError::new(
+                    self.model_ref.provider_id.clone(),
+                    ProviderErrorKind::UnsupportedCapability,
+                    "portable compaction is deferred beyond phase-2",
+                ))
+            }
+            logos_runtime_types::CompactionBackendKind::NativeRemoteRewrite => {
+                let result = self
+                    .adapter
+                    .compact_history(logos_runtime_types::InternalCompactionRequest {
+                        model_ref: self.model_ref.clone(),
+                        system: self.system.clone(),
+                        messages: self.history.clone(),
+                        tools: self.tool_runtime.declared_tools(),
+                    })
+                    .await?;
+                self.history = result.replacement_messages;
+                self.continuation = None;
+                Ok(())
+            }
+        }
     }
 
     pub async fn run_turn(
@@ -97,6 +139,18 @@ impl SessionEngine {
     }
 
     pub async fn run_turn_with_tools(
+        &mut self,
+        new_messages: Vec<InternalMessage>,
+        tools: Vec<InternalToolDef>,
+    ) -> Result<TurnOutcome, ProviderError> {
+        let result = self.run_turn_with_tools_inner(new_messages, tools).await;
+        if result.is_err() {
+            self.provider_session.finish_turn().await?;
+        }
+        result
+    }
+
+    async fn run_turn_with_tools_inner(
         &mut self,
         new_messages: Vec<InternalMessage>,
         tools: Vec<InternalToolDef>,
@@ -201,6 +255,7 @@ impl SessionEngine {
             }
 
             if tool_results.is_empty() {
+                self.provider_session.finish_turn().await?;
                 return Ok(TurnOutcome {
                     events: all_events,
                     continuation: latest_continuation,

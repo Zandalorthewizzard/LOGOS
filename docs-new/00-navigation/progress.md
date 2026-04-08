@@ -63,6 +63,9 @@ outline: []
 13. Added a second narrow seam for explicit OpenAI continuation carryover, stabilized the adapter around fresh per-turn `ModelClientSession` creation, and removed duplicate normalized tool/reasoning emissions.
 14. Added a dedicated compaction-strategy discussion doc, linked it into the architecture hub and roadmap, and explicitly placed portable multi-provider compaction work in the persistence/resume phase while preserving the canonical OpenAI path earlier.
 15. Added an architecture-first phase-2 discussion/spec pair for the OpenAI canonical turn loop so the next phase starts from explicit ownership boundaries instead of ad hoc refactoring.
+16. Started the phase-2 implementation lane with honest OpenAI compaction-backend classification and session capability handoff points instead of premature portable compaction work.
+17. Extended the phase-2 preservation lane with explicit turn-state transfer hooks so fresh request-scoped OpenAI sessions can still preserve canonical sticky-routing behavior within one logical turn.
+18. Completed the phase-2 preservation lane with an adapter-native compaction handoff, a phase-2 acceptance report, and focused proofs for continuation, turn-state, ordering, and compaction behavior.
 
 ## Deferred
 
