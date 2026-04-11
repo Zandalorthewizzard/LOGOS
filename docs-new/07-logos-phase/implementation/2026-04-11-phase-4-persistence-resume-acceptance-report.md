@@ -126,8 +126,8 @@ No new seam was required for the phase-4 persistence/resume scope.
 1. `cargo test -p logos-journal`
 2. `cargo test -p logos-session-engine --test phase4_persistence`
 3. `cargo test -p logos-session-engine`
-4. `just bazel-lock-update`
-5. `just bazel-lock-check`
+4. Attempted `just bazel-lock-update` from repo root, but `bazel` was unavailable in the local environment.
+5. Attempted `just bazel-lock-check` from repo root, but it failed for the same missing-`bazel` reason.
 6. `just fix -p logos-journal`
 7. `just fix -p logos-session-engine`
 8. `just fmt`
