@@ -27,10 +27,43 @@ pub enum ToolApprovalOutcome {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct McpToolCallCorrelation {
+    pub request_id: String,
+    pub submission_id: String,
+    pub thread_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToolCallTerminalState {
+    CompletedWithResult,
+    DeniedByApproval,
+    FailedBeforeResult,
+    Interrupted,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToolCallResultDisposition {
+    None,
+    Success,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolCallRecord {
+    pub call_id: CallId,
+    pub tool_name: String,
+    pub execution: ToolExecutionKind,
+    pub terminal_state: ToolCallTerminalState,
+    pub mcp_correlation: Option<McpToolCallCorrelation>,
+    pub result_disposition: ToolCallResultDisposition,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolApprovalRequest {
     pub call_id: CallId,
     pub tool_name: String,
     pub execution: ToolExecutionKind,
+    pub mcp_correlation: Option<McpToolCallCorrelation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

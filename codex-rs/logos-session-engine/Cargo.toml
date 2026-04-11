@@ -6,10 +6,12 @@ license.workspace = true
 
 [dependencies]
 futures = { workspace = true }
+logos-journal = { workspace = true }
 logos-provider-api = { workspace = true }
 logos-runtime-types = { workspace = true }
 logos-tool-runtime = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
 async-trait = { workspace = true }
@@ -22,7 +24,7 @@ core_test_support = { workspace = true }
 logos-provider-openai = { workspace = true }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "sync", "time"] }
 wiremock = { workspace = true }
 
 [lints]

@@ -8,6 +8,7 @@ use crate::model::CallId;
 use crate::model::ProviderId;
 use crate::tools::ToolApprovalOutcome;
 use crate::tools::ToolApprovalRequest;
+use crate::tools::ToolCallRecord;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum InternalEvent {
@@ -37,6 +38,9 @@ pub enum InternalEvent {
     ApprovalResolved {
         call_id: CallId,
         outcome: ToolApprovalOutcome,
+    },
+    ToolCallTerminal {
+        record: ToolCallRecord,
     },
     ReasoningDelta {
         text: String,

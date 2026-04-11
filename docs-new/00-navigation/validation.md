@@ -168,9 +168,57 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 
 - verified by `../07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md`.
 
-34. The first phase-2 implementation step now classifies OpenAI compaction honestly as a native remote rewrite backend and exposes provider/model capability handoff points through the session engine.
+38. The phase-2 canonical OpenAI turn-loop preservation scope is now logically complete for the current strict spec.
 
-- verified by `../../../codex-rs/logos-runtime-types/src/capabilities.rs`, `../../../codex-rs/logos-provider-openai/src/adapter.rs`, and `../../../codex-rs/logos-session-engine/src/session.rs`.
+- verified by `../07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md`.
+
+39. LOGOS now has a future-direction discussion that captures a plugin-system strategy around a preserved Codex kernel and explicitly marks it as post-core planning rather than current-phase implementation.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-future-discussion.md`.
+
+40. LOGOS now has a draft plugin-system architecture direction doc that defines plugin families, authority boundaries, manifest direction, lifecycle expectations, and a protocol-first extension posture.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-architecture-direction.md`.
+
+41. LOGOS now has a canonical phase-3 discussion/spec pair that defines `Phase 3: Tool Loop Boundary` as the remaining tool-loop ownership and invariant lane after the accepted phase-1 and phase-2 baseline.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md`, `../07-logos-phase/implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md`, `../07-logos-phase/implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md`, and `../07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md`.
+
+42. LOGOS now has a narrower phase-3 MCP/tool-correlation discussion/spec pair that fixes the exact MCP correlation payload, terminal lifecycle branches, and boundary ownership required for implementation.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md`, `../07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md`, and `../../input-sources-temp/codex-upstream/codex-rs/mcp-server/src/codex_tool_runner.rs`.
+
+43. Phase-3 now has complete pre-implementation paper coverage for the current scope and is implementation-ready without another narrowing pass.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md`, `../07-logos-phase/implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md`, `../07-logos-phase/architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md`, and `../07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md`.
+
+44. The phase-3 MCP/tool-correlation docs now lock the exact ingress seam for `request_id` and `submission_id` before approval/execution, and document `submission_id` as a conscious LOGOS-level duplication rather than direct upstream protocol truth.
+
+- verified by `../07-logos-phase/architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md` and `../07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md`.
+
+45. The phase-3 implementation lane now records explicit terminal tool-call state for completed, denied, failed, and interrupted runtime tool branches, and MCP-backed runtime calls receive their correlation bundle at a runtime-owned ingress hook before approval/execution.
+
+- verified by `../../codex-rs/logos-runtime-types/src/tools.rs`, `../../codex-rs/logos-tool-runtime/src/lib.rs`, `../../codex-rs/logos-session-engine/src/session.rs`, and `../../codex-rs/logos-session-engine/tests/phase1_boundary.rs`.
+
+46. LOGOS now has a formal phase-3 acceptance report that maps the delivered tool-loop boundary implementation back to the phase-3 strict specs and records that no new Codex-base seam was required.
+
+- verified by `../07-logos-phase/implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md`, `../07-logos-phase/implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md`, and `../07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md`.
+
+47. LOGOS now has a canonical phase-4 persistence/resume discussion/spec pair that fixes phase-4 as the durable journal and restart-safe resume lane after the completed phase-2 and phase-3 inputs.
+
+- verified by `../07-logos-phase/architecture/2026-04-11-phase-4-persistence-resume-discussion.md`, `../07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md`, `../07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md`, and `../07-logos-phase/implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md`.
+
+48. The last architecture-critical blind spot for phase-4 journal record families is now closed by a bounded companion discussion that locks record taxonomy, canonical-versus-debug field classes, and write ordering.
+
+- verified by `../07-logos-phase/architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md` and `../07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md`.
+
+49. Phase-4 is now implementation-ready on paper for the current scope without another pre-implementation narrowing pass.
+
+- verified by `../07-logos-phase/architecture/2026-04-11-phase-4-persistence-resume-discussion.md`, `../07-logos-phase/architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md`, and `../07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md`.
+
+50. LOGOS now has a completed phase-4 persistence/resume implementation slice with a LOGOS-native journal v0, restart-safe OpenAI resume, stateless replay reconstruction, durable approval/tool state, and compaction checkpoint replay boundaries.
+
+- verified by `../../codex-rs/logos-journal/src/journal.rs`, `../../codex-rs/logos-session-engine/src/session.rs`, `../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`, and `../07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md`.
 
 ## Open / Deferred
 
@@ -184,15 +232,16 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 8. Deferred: Z.AI JS/TS remains unverified absent a canonical official repo link.
 9. Deferred: the provider profile document still needs to be split into narrower implementation specs once provider order and prototype findings stabilize.
 10. Deferred: several provider docs still need prototype-backed narrowing before they can become strict implementation task specs.
-11. Deferred: second-wave strict specs for persistence/resume are still not written.
+11. Deferred: phase-5 validation-adapter implementation and broader multi-provider persistence validation are still not done.
 12. Deferred: the feature gap matrix may still need finer per-mode rows for mixed-mode providers.
 13. Deferred: reliability and determinism are still only partially captured and may need prototype-backed dedicated docs.
 14. Deferred: review-based `main` protection may still need tightening once the maintainer model is no longer single-owner.
 15. Deferred: durable approval journaling/resume reconstruction and later provider-native fast-path design still need their own follow-on phase work.
 16. Deferred: a strict implementation spec for multi-provider compaction policy and backend classification is still not written; only the architecture discussion and roadmap placement are now locked.
-17. Deferred: phase-2 implementation and acceptance artifacts are still not written; only the architecture-first foundation is now locked.
-18. Deferred: follow-on phases still need durable journal/resume and portable multi-provider compaction work beyond the completed canonical OpenAI preservation scope.
-19. Deferred: phase-2 still needs focused work on canonical turn-state and compaction preservation behavior beyond the initial capability and handoff slice.
+17. Deferred: follow-on phases still need durable journal/resume and portable multi-provider compaction work beyond the completed canonical OpenAI preservation scope.
+18. Deferred: the plugin-system direction is future architecture only; there is no implemented plugin host, manifest loader, permission model, or community plugin surface yet.
+19. Deferred: multi-provider validation and operational hardening still remain after the completed phase-4 slice.
+20. Deferred: non-OpenAI provider implementation, storage-engine scaling/migration details, and host UI integration remain outside the completed phase-4 slice.
 
 ## Evidence
 
@@ -336,6 +385,24 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - path: `../../notes/2026-04-03-phase-1-boundary-extraction.md`
   symbol: `2026-04-03 Phase 1 Boundary Extraction`
   lines: 1-200
+- path: `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-future-discussion.md`
+  symbol: `LOGOS Plugin System Future Discussion`
+  lines: 1-240
+- path: `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-architecture-direction.md`
+  symbol: `LOGOS Plugin System Architecture Direction`
+  lines: 1-260
+- path: `../07-logos-phase/architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md`
+  symbol: `LOGOS Phase 3 Tool Loop Boundary Discussion`
+  lines: 1-260
+- path: `../07-logos-phase/implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md`
+  symbol: `LOGOS Phase 3 Tool Loop Boundary Strict Spec`
+  lines: 1-260
+- path: `../07-logos-phase/architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md`
+  symbol: `LOGOS Phase 3 MCP Tool Correlation Discussion`
+  lines: 1-260
+- path: `../07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md`
+  symbol: `LOGOS Phase 3 MCP Tool Correlation Strict Spec`
+  lines: 1-260
 - path: `../../input-sources-temp/provider-source-inventory.md`
   symbol: `Provider source inventory`
   lines: 1-260

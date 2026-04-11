@@ -6001,6 +6001,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-journal"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "logos-runtime-types",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
 name = "logos-provider-api"
 version = "0.0.0"
 dependencies = [
@@ -6046,6 +6060,7 @@ dependencies = [
  "codex-protocol",
  "core_test_support",
  "futures",
+ "logos-journal",
  "logos-provider-api",
  "logos-provider-openai",
  "logos-runtime-types",
@@ -6054,6 +6069,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "uuid",
  "wiremock",
 ]
 

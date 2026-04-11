@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-02",
+  "generated_at": "2026-04-08",
   "scope": "logos-docs",
   "docs": [
     {
@@ -179,6 +179,38 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-phase-3-tool-loop-boundary-discussion",
+      "path": "07-logos-phase/architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 3", "tool loop boundary", "mcp correlation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-3-mcp-tool-correlation-discussion",
+      "path": "07-logos-phase/architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 3", "mcp correlation", "tool lifecycle"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-4-persistence-resume-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-phase-4-persistence-resume-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 4", "persistence", "resume"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-4-journal-record-taxonomy-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 4", "journal taxonomy", "record families"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-tool-loop-architecture-spec",
       "path": "07-logos-phase/architecture/2026-04-02-logos-tool-loop-architecture-spec.md",
       "type": "spec",
@@ -208,6 +240,22 @@
       "type": "spec",
       "focus": ["host/daemon", "transport", "ipc"],
       "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-plugin-system-future-discussion",
+      "path": "07-logos-phase/architecture/2026-04-08-logos-plugin-system-future-discussion.md",
+      "type": "discussion",
+      "focus": ["plugins", "future direction", "preserved codex kernel"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-plugin-system-architecture-direction",
+      "path": "07-logos-phase/architecture/2026-04-08-logos-plugin-system-architecture-direction.md",
+      "type": "spec",
+      "focus": ["plugin host", "extension contracts", "future architecture"],
+      "status": "draft",
       "source_of_truth": "working-doc"
     },
     {
@@ -315,6 +363,54 @@
       "path": "07-logos-phase/implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md",
       "type": "report",
       "focus": ["acceptance report", "phase 2", "openai canonical turn loop"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-3-tool-loop-boundary-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md",
+      "type": "spec",
+      "focus": ["strict implementation spec", "phase 3", "tool loop boundary"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-3-mcp-tool-correlation-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md",
+      "type": "spec",
+      "focus": [
+        "strict implementation spec",
+        "phase 3",
+        "mcp tool correlation"
+      ],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-3-tool-loop-boundary-acceptance-report",
+      "path": "07-logos-phase/implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md",
+      "type": "report",
+      "focus": ["acceptance report", "phase 3", "tool loop boundary"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-4-persistence-resume-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md",
+      "type": "spec",
+      "focus": [
+        "strict implementation spec",
+        "phase 4",
+        "persistence and resume"
+      ],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-4-persistence-resume-acceptance-report",
+      "path": "07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md",
+      "type": "report",
+      "focus": ["acceptance report", "phase 4", "persistence and resume"],
       "status": "active",
       "source_of_truth": "working-doc"
     },

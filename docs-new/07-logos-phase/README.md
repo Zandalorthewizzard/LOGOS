@@ -24,10 +24,16 @@ related:
     [architecture/2026-04-02-logos-persistence-resume-architecture-spec.md],
     [architecture/2026-04-03-logos-compaction-strategy-discussion.md],
     [architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md],
+    [architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md],
+    [architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md],
+    [architecture/2026-04-11-phase-4-persistence-resume-discussion.md],
+    [architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md],
     [architecture/2026-04-02-logos-tool-loop-architecture-spec.md],
     [architecture/2026-04-02-logos-capability-model-architecture-spec.md],
     [architecture/2026-04-02-logos-approval-control-architecture-spec.md],
     [architecture/2026-04-02-logos-host-daemon-transport-spec.md],
+    [architecture/2026-04-08-logos-plugin-system-future-discussion.md],
+    [architecture/2026-04-08-logos-plugin-system-architecture-direction.md],
     [architecture/2026-04-02-logos-runtime-tier-contract-spec.md],
     [architecture/2026-04-02-logos-tier-0-semantic-surfaces-spec.md],
     [architecture/2026-04-02-logos-adapter-health-and-drift-policy.md],
@@ -48,6 +54,11 @@ related:
     [
       implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md,
     ],
+    [implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md],
+    [implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md],
+    [implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md],
+    [implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md],
+    [implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md],
     [implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [implementation/2026-04-02-codex-base-repository-strategy.md],
     [implementation/2026-04-02-upstream-sync-policy.md],
@@ -85,31 +96,42 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 15. [[architecture/2026-04-02-logos-persistence-resume-architecture-spec.md]]
 16. [[architecture/2026-04-03-logos-compaction-strategy-discussion.md]]
 17. [[architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md]]
-18. [[architecture/2026-04-02-logos-tool-loop-architecture-spec.md]]
-19. [[architecture/2026-04-02-logos-capability-model-architecture-spec.md]]
-20. [[architecture/2026-04-02-logos-approval-control-architecture-spec.md]]
-21. [[architecture/2026-04-02-logos-host-daemon-transport-spec.md]]
-22. [[architecture/2026-04-02-logos-runtime-contract-spec.md]]
-23. [[architecture/2026-04-02-logos-runtime-tier-contract-spec.md]]
-24. [[architecture/2026-04-02-logos-tier-0-semantic-surfaces-spec.md]]
-25. [[architecture/2026-04-02-logos-adapter-health-and-drift-policy.md]]
-26. [[architecture/2026-04-02-logos-minimal-survivable-agent-baseline-spec.md]]
-27. [[architecture/2026-04-02-logos-semantics-and-guarantees-matrix.md]]
-28. [[architecture/2026-04-02-logos-multi-provider-feature-gap-matrix.md]]
-29. [[research/2026-03-30-logos-provider-research-report.md]]
-30. [[research/2026-04-02-opencode-goose-architecture-reference.md]]
-31. [[implementation/2026-04-02-codex-base-repository-strategy.md]]
-32. [[implementation/2026-04-02-upstream-sync-policy.md]]
-33. [[implementation/2026-04-02-branch-and-pr-workflow.md]]
-34. [[implementation/2026-03-30-logos-global-roadmap.md]]
-35. [[implementation/2026-03-30-logos-phase-1-implementation-slice.md]]
-36. [[implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
-37. [[implementation/2026-04-03-codex-core-seam-index.md]]
-38. [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
-39. [[implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
-40. [[implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
-41. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
-42. [[research/2026-03-30-logos-research-requirements.md]]
+18. [[architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md]]
+19. [[architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md]]
+20. [[architecture/2026-04-11-phase-4-persistence-resume-discussion.md]]
+21. [[architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md]]
+22. [[architecture/2026-04-02-logos-tool-loop-architecture-spec.md]]
+23. [[architecture/2026-04-02-logos-capability-model-architecture-spec.md]]
+24. [[architecture/2026-04-02-logos-approval-control-architecture-spec.md]]
+25. [[architecture/2026-04-02-logos-host-daemon-transport-spec.md]]
+26. [[architecture/2026-04-08-logos-plugin-system-future-discussion.md]]
+27. [[architecture/2026-04-08-logos-plugin-system-architecture-direction.md]]
+28. [[architecture/2026-04-02-logos-runtime-contract-spec.md]]
+29. [[architecture/2026-04-02-logos-runtime-tier-contract-spec.md]]
+30. [[architecture/2026-04-02-logos-tier-0-semantic-surfaces-spec.md]]
+31. [[architecture/2026-04-02-logos-adapter-health-and-drift-policy.md]]
+32. [[architecture/2026-04-02-logos-minimal-survivable-agent-baseline-spec.md]]
+33. [[architecture/2026-04-02-logos-semantics-and-guarantees-matrix.md]]
+34. [[architecture/2026-04-02-logos-multi-provider-feature-gap-matrix.md]]
+35. [[research/2026-03-30-logos-provider-research-report.md]]
+36. [[research/2026-04-02-opencode-goose-architecture-reference.md]]
+37. [[implementation/2026-04-02-codex-base-repository-strategy.md]]
+38. [[implementation/2026-04-02-upstream-sync-policy.md]]
+39. [[implementation/2026-04-02-branch-and-pr-workflow.md]]
+40. [[implementation/2026-03-30-logos-global-roadmap.md]]
+41. [[implementation/2026-03-30-logos-phase-1-implementation-slice.md]]
+42. [[implementation/2026-04-02-phase-1-boundary-extraction-strict-spec.md]]
+43. [[implementation/2026-04-03-codex-core-seam-index.md]]
+44. [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
+45. [[implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
+46. [[implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
+47. [[implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md]]
+48. [[implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md]]
+49. [[implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md]]
+50. [[implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md]]
+51. [[implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md]]
+52. [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
+53. [[research/2026-03-30-logos-research-requirements.md]]
 
 ## Folder Layout
 
@@ -157,10 +179,16 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 - [[architecture/2026-04-02-logos-persistence-resume-architecture-spec.md]]
 - [[architecture/2026-04-03-logos-compaction-strategy-discussion.md]]
 - [[architecture/2026-04-03-phase-2-openai-canonical-turn-loop-discussion.md]]
+- [[architecture/2026-04-08-phase-3-tool-loop-boundary-discussion.md]]
+- [[architecture/2026-04-08-phase-3-mcp-tool-correlation-discussion.md]]
+- [[architecture/2026-04-11-phase-4-persistence-resume-discussion.md]]
+- [[architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md]]
 - [[architecture/2026-04-02-logos-tool-loop-architecture-spec.md]]
 - [[architecture/2026-04-02-logos-capability-model-architecture-spec.md]]
 - [[architecture/2026-04-02-logos-approval-control-architecture-spec.md]]
 - [[architecture/2026-04-02-logos-host-daemon-transport-spec.md]]
+- [[architecture/2026-04-08-logos-plugin-system-future-discussion.md]]
+- [[architecture/2026-04-08-logos-plugin-system-architecture-direction.md]]
 - [[architecture/2026-04-02-logos-runtime-contract-spec.md]]
 - [[architecture/2026-04-02-logos-runtime-tier-contract-spec.md]]
 - [[architecture/2026-04-02-logos-tier-0-semantic-surfaces-spec.md]]
@@ -175,6 +203,11 @@ This folder is the main architecture lane for the current LOGOS bootstrapping ph
 - [[implementation/2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 - [[implementation/2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
 - [[implementation/2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
+- [[implementation/2026-04-08-phase-3-tool-loop-boundary-strict-spec.md]]
+- [[implementation/2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md]]
+- [[implementation/2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md]]
+- [[implementation/2026-04-11-phase-4-persistence-resume-strict-spec.md]]
+- [[implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md]]
 - [[implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[implementation/2026-04-02-codex-base-repository-strategy.md]]
 - [[implementation/2026-04-02-upstream-sync-policy.md]]

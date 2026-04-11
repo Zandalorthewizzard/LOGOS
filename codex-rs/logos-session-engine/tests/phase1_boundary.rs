@@ -23,6 +23,10 @@ use core_test_support::responses::sse;
 use core_test_support::responses::start_mock_server;
 use core_test_support::responses::start_websocket_server;
 use core_test_support::responses::start_websocket_server_with_headers;
+use futures::stream;
+use logos_provider_api::ProviderAdapter;
+use logos_provider_api::ProviderEventStream;
+use logos_provider_api::ProviderSession;
 use logos_provider_openai::OpenAiAdapter;
 use logos_provider_openai::OpenAiAdapterConfig;
 use logos_runtime_types::CompactionBackendKind;
@@ -31,17 +35,21 @@ use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
 use logos_runtime_types::InternalToolDef;
+use logos_runtime_types::McpToolCallCorrelation;
 use logos_runtime_types::ModelRef;
 use logos_runtime_types::ToolApprovalMode;
 use logos_runtime_types::ToolApprovalOutcome;
 use logos_runtime_types::ToolApprovalRequest;
+use logos_runtime_types::ToolCallResultDisposition;
+use logos_runtime_types::ToolCallTerminalState;
 use logos_runtime_types::ToolExecutionKind;
 use logos_runtime_types::ToolExecutionPolicy;
 use logos_session_engine::SessionEngine;
+use logos_tool_runtime::McpCorrelationIngress;
 use logos_tool_runtime::RuntimeToolExecutor;
 use logos_tool_runtime::ToolApprover;
+use logos_tool_runtime::ToolExecutionOutput;
 use pretty_assertions::assert_eq;
-use serde_json::Value;
 use serde_json::json;
 use tempfile::TempDir;
 use wiremock::MockServer;
@@ -465,6 +473,7 @@ async fn runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
             call_id: "call-1".to_string(),
             tool_name: "logos_echo".to_string(),
             execution: ToolExecutionKind::RuntimeOwned,
+            mcp_correlation: None,
         },
     }));
     assert!(outcome.events.contains(&InternalEvent::ApprovalResolved {
@@ -478,6 +487,27 @@ async fn runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
     assert!(outcome.events.contains(&InternalEvent::TextDelta {
         text: "Echoed hi.".to_string(),
     }));
+    assert!(outcome.events.contains(&InternalEvent::ToolCallTerminal {
+        record: logos_runtime_types::ToolCallRecord {
+            call_id: "call-1".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            terminal_state: ToolCallTerminalState::CompletedWithResult,
+            mcp_correlation: None,
+            result_disposition: ToolCallResultDisposition::Success,
+        },
+    }));
+    assert_eq!(
+        session.tool_call_records(),
+        &[logos_runtime_types::ToolCallRecord {
+            call_id: "call-1".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            terminal_state: ToolCallTerminalState::CompletedWithResult,
+            mcp_correlation: None,
+            result_disposition: ToolCallResultDisposition::Success,
+        }]
+    );
     let second = server
         .connections()
         .get(1)
@@ -551,6 +581,17 @@ async fn runtime_tool_error_is_reinjected_as_tool_result() {
         second["input"][2]["output"],
         json!("{\"error\":\"tool exploded\"}")
     );
+    assert_eq!(
+        session.tool_call_records(),
+        &[logos_runtime_types::ToolCallRecord {
+            call_id: "call-err".to_string(),
+            tool_name: "logos_fail".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            terminal_state: ToolCallTerminalState::FailedBeforeResult,
+            mcp_correlation: None,
+            result_disposition: ToolCallResultDisposition::Error,
+        }]
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -595,6 +636,131 @@ async fn denied_runtime_tool_is_reinjected_without_execution() {
                 is_error: true,
             }
     }));
+    assert_eq!(
+        session.tool_call_records(),
+        &[logos_runtime_types::ToolCallRecord {
+            call_id: "call-deny".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            terminal_state: ToolCallTerminalState::DeniedByApproval,
+            mcp_correlation: None,
+            result_disposition: ToolCallResultDisposition::Error,
+        }]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn mcp_backed_runtime_tool_attaches_correlation_before_approval() {
+    let server = start_websocket_server(vec![
+        vec![vec![
+            ev_response_created("resp-1"),
+            ev_function_call("call-mcp", "logos_mcp_echo", r#"{"text":"hi"}"#),
+            ev_completed("resp-1"),
+        ]],
+        vec![vec![
+            ev_response_created("resp-2"),
+            ev_output_text_delta("MCP echoed hi."),
+            ev_assistant_message("msg-2", "MCP echoed hi."),
+            ev_completed("resp-2"),
+        ]],
+    ])
+    .await;
+
+    let mut session = build_session(&server).await;
+    session.register_runtime_tool(
+        mcp_runtime_tool_def("logos_mcp_echo"),
+        Arc::new(McpEchoTool),
+    );
+    session.set_mcp_correlation_ingress(Arc::new(DeterministicMcpIngress));
+    session.set_tool_execution_policy(ToolExecutionPolicy {
+        mcp_runtime_default: ToolApprovalMode::AutoApprove,
+        ..ToolExecutionPolicy::default()
+    });
+
+    let outcome = session
+        .run_turn(vec![InternalMessage::user_text("use the mcp echo tool")])
+        .await
+        .expect("mcp runtime tool roundtrip should succeed");
+
+    assert!(outcome.events.contains(&InternalEvent::ApprovalRequested {
+        request: ToolApprovalRequest {
+            call_id: "call-mcp".to_string(),
+            tool_name: "logos_mcp_echo".to_string(),
+            execution: ToolExecutionKind::McpBackedRuntime,
+            mcp_correlation: Some(McpToolCallCorrelation {
+                request_id: "req-call-mcp".to_string(),
+                submission_id: "sub-call-mcp".to_string(),
+                thread_id: None,
+            }),
+        },
+    }));
+    assert_eq!(
+        session.tool_call_records(),
+        &[logos_runtime_types::ToolCallRecord {
+            call_id: "call-mcp".to_string(),
+            tool_name: "logos_mcp_echo".to_string(),
+            execution: ToolExecutionKind::McpBackedRuntime,
+            terminal_state: ToolCallTerminalState::CompletedWithResult,
+            mcp_correlation: Some(McpToolCallCorrelation {
+                request_id: "req-call-mcp".to_string(),
+                submission_id: "sub-call-mcp".to_string(),
+                thread_id: Some("thread-call-mcp".to_string()),
+            }),
+            result_disposition: ToolCallResultDisposition::Success,
+        }]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn interrupted_tool_call_records_terminal_state_without_result() {
+    let adapter = Arc::new(FakeAdapter::new(vec![vec![
+        Ok(InternalEvent::ToolCallStarted {
+            call_id: "call-int".to_string(),
+            name: "logos_mcp_echo".to_string(),
+        }),
+        Ok(InternalEvent::ToolCallArgumentsDelta {
+            call_id: "call-int".to_string(),
+            delta: r#"{"text":"hi"}"#.to_string(),
+        }),
+        Err(logos_runtime_types::ProviderError::new(
+            "fake",
+            logos_runtime_types::ProviderErrorKind::Transport,
+            "stream interrupted",
+        )),
+    ]]));
+    let mut session = SessionEngine::new(adapter, model_ref(), None)
+        .await
+        .expect("fake session should build");
+    session.register_runtime_tool(
+        mcp_runtime_tool_def("logos_mcp_echo"),
+        Arc::new(McpEchoTool),
+    );
+    session.set_mcp_correlation_ingress(Arc::new(DeterministicMcpIngress));
+
+    let error = session
+        .run_turn(vec![InternalMessage::user_text("trigger interrupted tool")])
+        .await
+        .expect_err("interrupted stream should fail the turn");
+
+    assert_eq!(
+        error.kind,
+        logos_runtime_types::ProviderErrorKind::Transport
+    );
+    assert_eq!(
+        session.tool_call_records(),
+        &[logos_runtime_types::ToolCallRecord {
+            call_id: "call-int".to_string(),
+            tool_name: "logos_mcp_echo".to_string(),
+            execution: ToolExecutionKind::McpBackedRuntime,
+            terminal_state: ToolCallTerminalState::Interrupted,
+            mcp_correlation: Some(McpToolCallCorrelation {
+                request_id: "req-call-int".to_string(),
+                submission_id: "sub-call-int".to_string(),
+                thread_id: None,
+            }),
+            result_disposition: ToolCallResultDisposition::None,
+        }]
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -654,14 +820,24 @@ fn runtime_tool_def(name: &str) -> InternalToolDef {
     }
 }
 
+fn mcp_runtime_tool_def(name: &str) -> InternalToolDef {
+    InternalToolDef {
+        execution: ToolExecutionKind::McpBackedRuntime,
+        ..runtime_tool_def(name)
+    }
+}
+
 struct EchoTool;
 
 #[async_trait]
 impl RuntimeToolExecutor for EchoTool {
-    async fn execute(&self, arguments: Value) -> Result<Value, String> {
-        Ok(json!({
-            "text": arguments["text"].as_str().unwrap_or_default()
-        }))
+    async fn execute(
+        &self,
+        call: &logos_tool_runtime::PendingToolCall,
+    ) -> Result<ToolExecutionOutput, String> {
+        Ok(ToolExecutionOutput::success(json!({
+            "text": call.arguments()["text"].as_str().unwrap_or_default()
+        })))
     }
 }
 
@@ -669,8 +845,46 @@ struct FailTool;
 
 #[async_trait]
 impl RuntimeToolExecutor for FailTool {
-    async fn execute(&self, _arguments: Value) -> Result<Value, String> {
+    async fn execute(
+        &self,
+        _call: &logos_tool_runtime::PendingToolCall,
+    ) -> Result<ToolExecutionOutput, String> {
         Err("tool exploded".to_string())
+    }
+}
+
+struct McpEchoTool;
+
+#[async_trait]
+impl RuntimeToolExecutor for McpEchoTool {
+    async fn execute(
+        &self,
+        call: &logos_tool_runtime::PendingToolCall,
+    ) -> Result<ToolExecutionOutput, String> {
+        let arguments = call.arguments();
+        let text = arguments["text"].as_str().unwrap_or_default().to_string();
+        Ok(ToolExecutionOutput {
+            output: json!({"text": text}),
+            mcp_correlation: call.mcp_correlation.as_ref().map(|correlation| {
+                McpToolCallCorrelation {
+                    request_id: correlation.request_id.clone(),
+                    submission_id: correlation.submission_id.clone(),
+                    thread_id: Some(format!("thread-{}", call.call_id)),
+                }
+            }),
+        })
+    }
+}
+
+struct DeterministicMcpIngress;
+
+impl McpCorrelationIngress for DeterministicMcpIngress {
+    fn begin_call(&self, call_id: &str, _tool_name: &str) -> McpToolCallCorrelation {
+        McpToolCallCorrelation {
+            request_id: format!("req-{call_id}"),
+            submission_id: format!("sub-{call_id}"),
+            thread_id: None,
+        }
     }
 }
 
@@ -707,6 +921,106 @@ async fn build_session(server: &WebSocketTestServer) -> SessionEngine {
         supports_websockets: true,
     })
     .await
+}
+
+fn model_ref() -> ModelRef {
+    ModelRef {
+        provider_id: "fake".to_string(),
+        model_id: MODEL.to_string(),
+    }
+}
+
+struct FakeAdapter {
+    turns: std::sync::Mutex<
+        std::collections::VecDeque<Vec<Result<InternalEvent, logos_runtime_types::ProviderError>>>,
+    >,
+}
+
+impl FakeAdapter {
+    fn new(turns: Vec<Vec<Result<InternalEvent, logos_runtime_types::ProviderError>>>) -> Self {
+        Self {
+            turns: std::sync::Mutex::new(turns.into()),
+        }
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for FakeAdapter {
+    fn provider_id(&self) -> &'static str {
+        "fake"
+    }
+
+    fn provider_capabilities(&self) -> logos_runtime_types::ProviderCapabilitySet {
+        logos_runtime_types::ProviderCapabilitySet {
+            supports_server_side_state: false,
+            supports_client_side_history: true,
+            supports_structured_output: false,
+            supports_context_cache: false,
+            supports_runtime_owned_tools: true,
+            supports_provider_builtin_tools: false,
+            supports_approval_control: true,
+            compaction_backend: CompactionBackendKind::Disabled,
+            continuation_mode: logos_runtime_types::ContinuationMode::ClientManaged,
+        }
+    }
+
+    fn model_capabilities(&self, _model: &ModelRef) -> logos_runtime_types::ModelCapabilitySet {
+        logos_runtime_types::ModelCapabilitySet {
+            supports_tool_calling: true,
+            supports_parallel_tools: false,
+            supports_tool_arg_streaming: false,
+            supports_provider_native_tool_calls: false,
+            supports_runtime_tool_reinjection: true,
+            supports_reasoning_deltas: false,
+            supports_opaque_reasoning_carryover: false,
+            supports_images: false,
+        }
+    }
+
+    async fn list_models(
+        &self,
+    ) -> Result<Vec<logos_runtime_types::ModelMeta>, logos_runtime_types::ProviderError> {
+        Ok(Vec::new())
+    }
+
+    async fn compact_history(
+        &self,
+        _request: logos_runtime_types::InternalCompactionRequest,
+    ) -> Result<logos_runtime_types::InternalCompactionResult, logos_runtime_types::ProviderError>
+    {
+        Err(logos_runtime_types::ProviderError::new(
+            "fake",
+            logos_runtime_types::ProviderErrorKind::UnsupportedCapability,
+            "compaction unsupported",
+        ))
+    }
+
+    async fn new_session(
+        &self,
+    ) -> Result<Box<dyn ProviderSession>, logos_runtime_types::ProviderError> {
+        let turns = self
+            .turns
+            .lock()
+            .expect("fake adapter mutex poisoned")
+            .pop_front()
+            .expect("missing fake turn script");
+        Ok(Box::new(FakeSession { turns: Some(turns) }))
+    }
+}
+
+struct FakeSession {
+    turns: Option<Vec<Result<InternalEvent, logos_runtime_types::ProviderError>>>,
+}
+
+#[async_trait]
+impl ProviderSession for FakeSession {
+    async fn stream_turn(
+        &mut self,
+        _request: logos_runtime_types::InternalTurnRequest,
+    ) -> Result<ProviderEventStream, logos_runtime_types::ProviderError> {
+        let turn = self.turns.take().expect("fake turn already consumed");
+        Ok(Box::pin(stream::iter(turn)))
+    }
 }
 
 async fn build_http_session(server: &MockServer) -> SessionEngine {

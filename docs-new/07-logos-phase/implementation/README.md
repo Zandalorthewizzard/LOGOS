@@ -14,6 +14,11 @@ related:
     [2026-04-03-phase-1-boundary-extraction-acceptance-report.md],
     [2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md],
     [2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md],
+    [2026-04-08-phase-3-tool-loop-boundary-strict-spec.md],
+    [2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md],
+    [2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md],
+    [2026-04-11-phase-4-persistence-resume-strict-spec.md],
+    [2026-04-11-phase-4-persistence-resume-acceptance-report.md],
     [2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [2026-04-02-codex-base-repository-strategy.md],
     [2026-04-02-upstream-sync-policy.md],
@@ -39,6 +44,11 @@ This folder holds phase slices, execution plans, strict implementation specs, an
 - [[2026-04-03-phase-1-boundary-extraction-acceptance-report.md]]
 - [[2026-04-03-phase-2-openai-canonical-turn-loop-strict-spec.md]]
 - [[2026-04-07-phase-2-openai-canonical-turn-loop-acceptance-report.md]]
+- [[2026-04-08-phase-3-tool-loop-boundary-strict-spec.md]]
+- [[2026-04-08-phase-3-mcp-tool-correlation-strict-spec.md]]
+- [[2026-04-11-phase-3-tool-loop-boundary-acceptance-report.md]]
+- [[2026-04-11-phase-4-persistence-resume-strict-spec.md]]
+- [[2026-04-11-phase-4-persistence-resume-acceptance-report.md]]
 - [[2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[2026-04-02-codex-base-repository-strategy.md]]
 - [[2026-04-02-upstream-sync-policy.md]]

@@ -67,6 +67,25 @@ outline: []
 17. Extended the phase-2 preservation lane with explicit turn-state transfer hooks so fresh request-scoped OpenAI sessions can still preserve canonical sticky-routing behavior within one logical turn.
 18. Completed the phase-2 preservation lane with an adapter-native compaction handoff, a phase-2 acceptance report, and focused proofs for continuation, turn-state, ordering, and compaction behavior.
 
+## 2026-04-08
+
+1. Added a future-direction discussion doc for a LOGOS plugin system built around a preserved Codex kernel instead of inside `codex-core`.
+2. Added a draft plugin-system architecture direction doc covering plugin families, protocol-first transport posture, manifests, lifecycle, trust boundaries, and phased adoption.
+3. Linked the new plugin docs into the roadmap, phase hub, and top-level navigation so later agents can recover the idea as a post-core extensibility direction instead of rediscovering it ad hoc.
+4. Aligned navigation state with the completed phase-2 closeout so validation no longer describes the canonical OpenAI preservation lane as still pending.
+5. Added a canonical phase-3 discussion/spec pair that narrows `Phase 3: Tool Loop Boundary` to the remaining ownership and invariant work after the delivered phase-1 and phase-2 tool-loop baseline.
+6. Recorded phase-3 as not yet implementation-ready and identified a narrower MCP/tool-correlation discussion/spec pass as the next required pre-implementation lock.
+7. Synced the phase hub, implementation hub, and top-level navigation files with the new phase-3 canonical docs.
+8. Added a narrower MCP/tool-correlation discussion/spec pair that locks explicit `request_id` / `submission_id` / `thread_id` handling, terminal lifecycle branches, and ownership boundaries for MCP-backed runtime tools.
+9. Updated the phase-3 boundary docs to treat the narrowing pass as complete and mark phase-3 implementation-ready on paper for the current scope.
+10. Re-synced navigation, inventory, progress, and validation after the new MCP/tool-correlation docs landed.
+11. Closed review findings on the phase-3 MCP docs by locking the exact runtime ingress seam for `request_id` and `submission_id`, and by re-framing `submission_id` as an explicit LOGOS design choice rather than direct upstream protocol truth.
+12. Started phase-3 code implementation by adding explicit MCP correlation payloads, a runtime-owned ingress hook, terminal tool-call records, and focused tests for completed, denied, failed, and interrupted branches.
+13. Completed the phase-3 execution lane by adding duplicate-terminal protection, writing the phase-3 acceptance report, and syncing the phase hub and navigation artifacts to the new completion state.
+14. Added an architecture-first phase-4 discussion/spec pair for persistence and resume, plus a bounded companion discussion that locks the exact journal record taxonomy and write ordering needed before implementation.
+15. Marked phase-4 implementation-ready on paper for the current scope once the new phase-4 discussion, taxonomy companion, and strict spec are treated as one locked set.
+16. Implemented phase-4 with a new additive `logos-journal` crate, session-engine journal integration, restart-safe OpenAI resume, stateless replay reconstruction, approval/tool durability, and a phase-4 acceptance report.
+
 ## Deferred
 
 1. Narrow imported working docs into smaller canonical specs as implementation advances.
@@ -79,10 +98,11 @@ outline: []
 8. Keep negative findings explicit instead of leaving them implied by `UNKNOWN`.
 9. Split the provider profile document into narrower per-provider implementation specs when one provider reaches coding readiness.
 10. Revisit whether any provider-specific implementation spec now has enough evidence to become strict task spec input.
-11. Add a second-wave strict implementation spec for persistence/resume when prototype scope is locked.
+11. Implement the locked phase-4 persistence/resume lane and write its acceptance report.
 12. Narrow the feature gap matrix further if product planning needs row-level mode splits for Gemini, Z.AI, and LM Studio.
 13. Decide whether reliability and determinism deserve their own dedicated prototype-backed matrix rather than staying folded into semantics/guarantees.
 14. Revisit `main` branch protection if the maintainer model expands enough to justify mandatory review gates.
+15. Decide when plugin-host design should move from future-direction docs into a real implementation phase after persistence/resume and validation adapters stabilize.
 
 ## Evidence
 
@@ -204,6 +224,12 @@ outline: []
 - path: `../07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md`
   symbol: `LOGOS OpenCode And Goose Architecture Reference`
   lines: 1-391
+- path: `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-future-discussion.md`
+  symbol: `LOGOS Plugin System Future Discussion`
+  lines: 1-240
+- path: `../07-logos-phase/architecture/2026-04-08-logos-plugin-system-architecture-direction.md`
+  symbol: `LOGOS Plugin System Architecture Direction`
+  lines: 1-260
 - path: `../../input-sources-temp/opencode-upstream/packages/web/src/content/docs/server.mdx`
   symbol: `OpenCode server docs snapshot`
   lines: 47-80

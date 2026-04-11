@@ -7,6 +7,8 @@ tags: [roadmap, logos, implementation, architecture]
 related:
   [
     [README.md],
+    [../architecture/2026-04-08-logos-plugin-system-future-discussion.md],
+    [../architecture/2026-04-08-logos-plugin-system-architecture-direction.md],
     [../architecture/2026-04-03-logos-compaction-strategy-discussion.md],
     [../architecture/2026-03-30-logos-adapter-boundary-spec.md],
     [../architecture/2026-03-30-logos-crate-map.md],
@@ -224,6 +226,25 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 
 1. Provider expansion is driven by evidence and product value.
 2. No native provider support is added by pretending it is just OpenAI compat.
+
+## Post-MVP Future Direction: Plugin System And Extension Host
+
+### Position
+
+1. A LOGOS plugin system is a future direction, not part of the initial MVP.
+2. The plugin host should live around the preserved Codex kernel, not inside `codex-core`.
+3. First-party "core plugins" should prove the extension contracts before community plugins are opened broadly.
+
+### Earliest Useful Timing
+
+1. Architecture shaping can happen earlier.
+2. Real host implementation should wait until phase 4 makes runtime authority around persistence, resume, and compaction stable enough.
+3. The first serious pluginization move is more realistic after phase 5 or phase 6, once LOGOS has at least one non-canonical provider path and one durable runtime path.
+
+### Companion Planning Inputs
+
+1. `../architecture/2026-04-08-logos-plugin-system-future-discussion.md`
+2. `../architecture/2026-04-08-logos-plugin-system-architecture-direction.md`
 
 ## Cross-Cutting Workstreams
 
