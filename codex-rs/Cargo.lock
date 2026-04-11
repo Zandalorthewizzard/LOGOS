@@ -6041,6 +6041,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-provider-openrouter"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "logos-provider-api",
+ "logos-runtime-types",
+ "pretty_assertions",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "wiremock",
+]
+
+[[package]]
 name = "logos-runtime-types"
 version = "0.0.0"
 dependencies = [
@@ -6063,9 +6079,11 @@ dependencies = [
  "logos-journal",
  "logos-provider-api",
  "logos-provider-openai",
+ "logos-provider-openrouter",
  "logos-runtime-types",
  "logos-tool-runtime",
  "pretty_assertions",
+ "reqwest",
  "serde_json",
  "tempfile",
  "tokio",

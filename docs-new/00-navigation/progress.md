@@ -86,6 +86,17 @@ outline: []
 15. Marked phase-4 implementation-ready on paper for the current scope once the new phase-4 discussion, taxonomy companion, and strict spec are treated as one locked set.
 16. Implemented phase-4 with a new additive `logos-journal` crate, session-engine journal integration, restart-safe OpenAI resume, stateless replay reconstruction, approval/tool durability, and a phase-4 acceptance report.
 
+## 2026-04-11
+
+1. Added `codex-rs/logos-provider-openrouter/` as the first non-canonical validation adapter for the OpenRouter Responses beta path.
+2. Implemented one stateless text turn and one journal-backed follow-up replay turn without inventing fake `previous_response_id` semantics.
+3. Added explicit OpenRouter request validation and response/error normalization for unsupported controls, non-text scope, and rate-limit handling.
+4. Added a focused phase-5 session-engine integration test file that proves text turn, replay from the same journal family, explicit unsupported handling, and an OpenAI no-regression continuation proof.
+5. Wrote the phase-5 OpenRouter acceptance report and synced the phase hub, implementation hub, and top-level navigation artifacts.
+6. Closed the phase-5 fix-pass by making structured-output capability truth honest for the current validation slice and by hardening malformed non-`2xx` HTTP fallback into explicit status-based provider errors.
+7. Added a dedicated structured-output capability discussion that explains why the current LOGOS boundary cannot honestly advertise OpenRouter structured-output support yet and where the real feature lane belongs.
+8. Re-aligned documentation state so phase-5 is now treated as closed for the current bounded validation scope after the final capability-truth and malformed-error-hardening pass.
+
 ## Deferred
 
 1. Narrow imported working docs into smaller canonical specs as implementation advances.
@@ -98,11 +109,12 @@ outline: []
 8. Keep negative findings explicit instead of leaving them implied by `UNKNOWN`.
 9. Split the provider profile document into narrower per-provider implementation specs when one provider reaches coding readiness.
 10. Revisit whether any provider-specific implementation spec now has enough evidence to become strict task spec input.
-11. Implement the locked phase-4 persistence/resume lane and write its acceptance report.
+11. Decide the next post-phase-5 implementation lane after the OpenRouter validation adapter closeout.
 12. Narrow the feature gap matrix further if product planning needs row-level mode splits for Gemini, Z.AI, and LM Studio.
 13. Decide whether reliability and determinism deserve their own dedicated prototype-backed matrix rather than staying folded into semantics/guarantees.
 14. Revisit `main` branch protection if the maintainer model expands enough to justify mandatory review gates.
 15. Decide when plugin-host design should move from future-direction docs into a real implementation phase after persistence/resume and validation adapters stabilize.
+16. Lock a future shared structured-output discussion/spec lane before broader provider phases claim schema-output support through the new LOGOS boundary.
 
 ## Evidence
 

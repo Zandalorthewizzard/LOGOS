@@ -89,6 +89,7 @@ members = [
     "plugin",
     "logos-runtime-types",
     "logos-provider-api",
+    "logos-provider-openrouter",
     "logos-provider-openai",
     "logos-journal",
     "logos-session-engine",
@@ -195,6 +196,7 @@ codex-v8-poc = { path = "v8-poc" }
 codex-windows-sandbox = { path = "windows-sandbox-rs" }
 logos-provider-api = { path = "logos-provider-api" }
 logos-journal = { path = "logos-journal" }
+logos-provider-openrouter = { path = "logos-provider-openrouter" }
 logos-provider-openai = { path = "logos-provider-openai" }
 logos-runtime-types = { path = "logos-runtime-types" }
 logos-session-engine = { path = "logos-session-engine" }

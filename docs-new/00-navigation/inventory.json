@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-08",
+  "generated_at": "2026-04-11",
   "scope": "logos-docs",
   "docs": [
     {
@@ -207,6 +207,14 @@
       "path": "07-logos-phase/architecture/2026-04-11-phase-4-journal-record-taxonomy-discussion.md",
       "type": "discussion",
       "focus": ["phase 4", "journal taxonomy", "record families"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-structured-output-capability-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-logos-structured-output-capability-discussion.md",
+      "type": "discussion",
+      "focus": ["structured output", "capability truth", "phase 5 follow-up"],
       "status": "active",
       "source_of_truth": "working-doc"
     },
@@ -419,6 +427,18 @@
       "path": "07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md",
       "type": "spec",
       "focus": ["strict implementation spec", "openrouter validation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-5-openrouter-validation-adapter-acceptance-report",
+      "path": "07-logos-phase/implementation/2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md",
+      "type": "report",
+      "focus": [
+        "acceptance report",
+        "phase 5",
+        "openrouter validation adapter"
+      ],
       "status": "active",
       "source_of_truth": "working-doc"
     },

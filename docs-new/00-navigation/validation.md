@@ -220,6 +220,18 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 
 - verified by `../../codex-rs/logos-journal/src/journal.rs`, `../../codex-rs/logos-session-engine/src/session.rs`, `../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`, and `../07-logos-phase/implementation/2026-04-11-phase-4-persistence-resume-acceptance-report.md`.
 
+51. LOGOS now has a completed phase-5 OpenRouter validation adapter slice with a real `logos-provider-openrouter` crate, stateless text turn support, journal-backed follow-up replay, explicit unsupported-control handling, and an OpenAI no-regression proof.
+
+- verified by `../../codex-rs/logos-provider-openrouter/src/adapter.rs`, `../../codex-rs/logos-provider-openrouter/src/map_request.rs`, `../../codex-rs/logos-provider-openrouter/src/responses.rs`, `../../codex-rs/logos-session-engine/tests/phase5_openrouter_validation.rs`, and `../07-logos-phase/implementation/2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md`.
+
+52. LOGOS now has a dedicated structured-output capability discussion that records why the current shared boundary cannot honestly advertise OpenRouter structured-output support yet and why the real feature needs its own future lane.
+
+- verified by `../07-logos-phase/architecture/2026-04-11-logos-structured-output-capability-discussion.md`, `../../codex-rs/logos-runtime-types/src/message.rs`, `../../codex-rs/logos-provider-openrouter/src/adapter.rs`, `../../codex-rs/logos-provider-openrouter/src/map_request.rs`, and `../../codex-rs/protocol/src/protocol.rs`.
+
+53. The phase-5 fix-pass now keeps OpenRouter structured-output capability claims honest in the current validation mode and hardens malformed non-`2xx` HTTP fallback into explicit status-based normalization instead of generic retryable transport errors.
+
+- verified by `../../codex-rs/logos-provider-openrouter/src/adapter.rs`, `../../codex-rs/logos-provider-openrouter/src/map_request.rs`, `../../codex-rs/logos-provider-openrouter/src/responses.rs`, `../../codex-rs/logos-session-engine/tests/phase5_openrouter_validation.rs`, and `../07-logos-phase/implementation/2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md`.
+
 ## Open / Deferred
 
 1. `UNKNOWN`: the long-term placement strategy for future provider-specific deep dives.
@@ -232,7 +244,7 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 8. Deferred: Z.AI JS/TS remains unverified absent a canonical official repo link.
 9. Deferred: the provider profile document still needs to be split into narrower implementation specs once provider order and prototype findings stabilize.
 10. Deferred: several provider docs still need prototype-backed narrowing before they can become strict implementation task specs.
-11. Deferred: phase-5 validation-adapter implementation and broader multi-provider persistence validation are still not done.
+11. Deferred: post-phase-5 provider expansion and broader multi-provider persistence validation are still not done.
 12. Deferred: the feature gap matrix may still need finer per-mode rows for mixed-mode providers.
 13. Deferred: reliability and determinism are still only partially captured and may need prototype-backed dedicated docs.
 14. Deferred: review-based `main` protection may still need tightening once the maintainer model is no longer single-owner.
@@ -242,6 +254,7 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 18. Deferred: the plugin-system direction is future architecture only; there is no implemented plugin host, manifest loader, permission model, or community plugin surface yet.
 19. Deferred: multi-provider validation and operational hardening still remain after the completed phase-4 slice.
 20. Deferred: non-OpenAI provider implementation, storage-engine scaling/migration details, and host UI integration remain outside the completed phase-4 slice.
+21. Deferred: the new LOGOS boundary still lacks a schema-bearing structured-output contract, so `OutputMode::Structured` remains too coarse for honest multi-provider support claims outside the preserved OpenAI path.
 
 ## Evidence
 
@@ -355,6 +368,12 @@ The LOGOS repository now has a primary documentation system, agent entrypoint, n
 - path: `../07-logos-phase/implementation/2026-04-02-openrouter-validation-adapter-strict-spec.md`
   symbol: `LOGOS OpenRouter Validation Adapter Strict Spec`
   lines: 1-260
+- path: `../07-logos-phase/architecture/2026-04-11-logos-structured-output-capability-discussion.md`
+  symbol: `LOGOS Structured Output Capability Discussion`
+  lines: 1-260
+- path: `../07-logos-phase/implementation/2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md`
+  symbol: `LOGOS Phase 5 OpenRouter Validation Adapter Acceptance Report`
+  lines: 1-220
 - path: `../07-logos-phase/architecture/2026-04-02-logos-runtime-contract-spec.md`
   symbol: `LOGOS Runtime Contract Spec`
   lines: 1-260
