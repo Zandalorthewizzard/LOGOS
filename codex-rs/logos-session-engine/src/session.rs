@@ -205,15 +205,46 @@ impl SessionEngine {
                         tools: self.tool_runtime.declared_tools(),
                     })
                     .await?;
-                let checkpoint_sequence_id = self.append_messages_to_journal(
-                    None,
-                    result.replacement_messages.iter().cloned(),
-                )?;
-                if let Some(checkpoint_sequence_id) = checkpoint_sequence_id {
+                let checkpoint_count = result
+                    .replacement_messages
+                    .iter()
+                    .filter(|message| {
+                        matches!(message, InternalMessage::CompactionCheckpoint { .. })
+                    })
+                    .count();
+                if checkpoint_count != 1 {
+                    return Err(ProviderError::new(
+                        self.model_ref.provider_id.clone(),
+                        ProviderErrorKind::InvalidRequest,
+                        format!(
+                            "native compaction must return exactly one compaction checkpoint, got {checkpoint_count}"
+                        ),
+                    ));
+                }
+                let mut first_retained_sequence_id = None;
+                let mut checkpoint_sequence_id = None;
+                for message in result.replacement_messages.iter().cloned() {
+                    let is_checkpoint =
+                        matches!(message, InternalMessage::CompactionCheckpoint { .. });
+                    let record =
+                        self.append_journal_record(JournalRecordKind::MessageAppended {
+                            turn_id: None,
+                            message,
+                        })?;
+                    if first_retained_sequence_id.is_none() {
+                        first_retained_sequence_id = Some(record.sequence_id);
+                    }
+                    if is_checkpoint {
+                        checkpoint_sequence_id = Some(record.sequence_id);
+                    }
+                }
+                if let (Some(first_retained_sequence_id), Some(checkpoint_sequence_id)) =
+                    (first_retained_sequence_id, checkpoint_sequence_id)
+                {
                     self.append_journal_record(JournalRecordKind::CompactionApplied {
                         turn_id: None,
                         backend: logos_runtime_types::CompactionBackendKind::NativeRemoteRewrite,
-                        first_retained_sequence_id: checkpoint_sequence_id,
+                        first_retained_sequence_id,
                         checkpoint_sequence_id,
                     })?;
                 }
@@ -252,6 +283,12 @@ impl SessionEngine {
         new_messages: Vec<InternalMessage>,
         tools: Vec<InternalToolDef>,
     ) -> Result<TurnOutcome, ProviderError> {
+        let mut pending_messages = new_messages;
+        let mut all_events = Vec::new();
+        let mut latest_continuation = self.continuation.clone();
+        let mut request_tools = tools;
+        request_tools.extend(self.tool_runtime.declared_tools());
+        self.validate_declared_tools(&request_tools)?;
         let turn_id = Uuid::new_v4().to_string();
         self.append_journal_record(JournalRecordKind::TurnStarted {
             turn_id: turn_id.clone(),
@@ -259,12 +296,6 @@ impl SessionEngine {
             reasoning_policy: ReasoningPolicy::Default,
             limits: TurnLimits::default(),
         })?;
-        let mut pending_messages = new_messages;
-        let mut all_events = Vec::new();
-        let mut latest_continuation = self.continuation.clone();
-        let mut request_tools = tools;
-        request_tools.extend(self.tool_runtime.declared_tools());
-        self.validate_declared_tools(&request_tools)?;
 
         loop {
             self.append_messages_to_journal(
@@ -548,7 +579,10 @@ impl SessionEngine {
             let pending_requests: Vec<_> = self
                 .approvals
                 .iter()
-                .filter(|approval| approval.state == ApprovalJournalState::Pending)
+                .filter(|approval| {
+                    approval.state == ApprovalJournalState::Pending
+                        && approval.turn_id.as_deref() == Some(turn_id)
+                })
                 .map(|approval| approval.request.clone())
                 .collect();
             for request in pending_requests {
@@ -617,10 +651,12 @@ impl SessionEngine {
             .iter_mut()
             .find(|approval| approval.request.call_id == request.call_id)
         {
+            existing.turn_id = Some(turn_id.to_string());
             existing.state = state.clone();
             existing.request = request.clone();
         } else {
             self.approvals.push(logos_journal::ApprovalView {
+                turn_id: Some(turn_id.to_string()),
                 request: request.clone(),
                 state: state.clone(),
             });

@@ -24,6 +24,7 @@ use core_test_support::responses::start_websocket_server;
 use futures::stream;
 use logos_journal::ApprovalJournalState;
 use logos_journal::JournalConfig;
+use logos_journal::JournalRecordKind;
 use logos_journal::JournalStore;
 use logos_provider_api::ProviderAdapter;
 use logos_provider_api::ProviderEventStream;
@@ -378,8 +379,221 @@ async fn compaction_checkpoint_changes_replay_boundary_without_provider_snapshot
             },
         ]
     );
+    let records = store
+        .open_session(&session_id)
+        .records()
+        .expect("records should load");
+    let checkpoint_sequence_id = records
+        .iter()
+        .find_map(|record| match &record.kind {
+            JournalRecordKind::MessageAppended {
+                message: InternalMessage::CompactionCheckpoint { .. },
+                ..
+            } => Some(record.sequence_id),
+            _ => None,
+        })
+        .expect("checkpoint record should exist");
+    let compaction = records
+        .iter()
+        .find_map(|record| match &record.kind {
+            JournalRecordKind::CompactionApplied {
+                first_retained_sequence_id,
+                checkpoint_sequence_id,
+                ..
+            } => Some((*first_retained_sequence_id, *checkpoint_sequence_id)),
+            _ => None,
+        })
+        .expect("compaction applied should exist");
+    assert!(compaction.0 < compaction.1);
+    assert_eq!(compaction.1, checkpoint_sequence_id);
     let body = compact.single_request().body_json();
     assert_eq!(body["input"][0]["role"].as_str(), Some("user"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn native_compaction_without_checkpoint_fails_without_mutation() {
+    let dir = TempDir::new().expect("tempdir should exist");
+    let store = JournalStore::new(dir.path(), JournalConfig::default()).expect("journal store");
+    let adapter = Arc::new(CompactionFakeAdapter::new(vec![vec![vec![
+        Ok(InternalEvent::TextDelta {
+            text: "First answer.".to_string(),
+        }),
+        Ok(InternalEvent::MessageCompleted {
+            message_id: Some("msg-1".to_string()),
+        }),
+        Ok(InternalEvent::ContinuationUpdated {
+            handle: logos_runtime_types::ContinuationHandle::OpenAiPreviousResponseId(
+                "resp-1".to_string(),
+            ),
+        }),
+        Ok(InternalEvent::Completed),
+    ]]]));
+    let mut session = SessionEngine::new(adapter.clone(), openai_model_ref(), None)
+        .await
+        .expect("session should build");
+    session
+        .create_and_attach_journal(&store)
+        .expect("journal should attach");
+    let session_id = session.session_id().to_string();
+
+    session
+        .run_turn(vec![InternalMessage::user_text("hello")])
+        .await
+        .expect("turn should succeed");
+    let history_before = session.history().to_vec();
+    let continuation_before = session.continuation().cloned();
+    let records_before = store
+        .open_session(&session_id)
+        .records()
+        .expect("records should load")
+        .len();
+
+    let error = session
+        .compact_history()
+        .await
+        .expect_err("missing checkpoint should fail compaction");
+
+    assert_eq!(error.kind, ProviderErrorKind::InvalidRequest);
+    assert_eq!(session.history(), history_before.as_slice());
+    assert_eq!(session.continuation(), continuation_before.as_ref());
+
+    let records = store
+        .open_session(&session_id)
+        .records()
+        .expect("records should load");
+    assert_eq!(records.len(), records_before);
+    assert!(
+        !records
+            .iter()
+            .any(|record| matches!(record.kind, JournalRecordKind::CompactionApplied { .. }))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn locally_rejected_turn_does_not_write_orphan_started_turn() {
+    let dir = TempDir::new().expect("tempdir should exist");
+    let store = JournalStore::new(dir.path(), JournalConfig::default()).expect("journal store");
+    let adapter = Arc::new(RecordingFakeAdapter::new(vec![vec![]]));
+    let mut session = SessionEngine::new(adapter, fake_model_ref(), None)
+        .await
+        .expect("session should build");
+    session
+        .create_and_attach_journal(&store)
+        .expect("journal should attach");
+    let session_id = session.session_id().to_string();
+
+    let error = session
+        .run_turn_with_tools(
+            vec![InternalMessage::user_text("use provider-native tool")],
+            vec![InternalToolDef {
+                name: "provider_search".to_string(),
+                description: "Provider-native search".to_string(),
+                input_schema: json!({"type": "object", "properties": {}}),
+                output_schema: None,
+                execution: ToolExecutionKind::ProviderNative,
+                metadata: Default::default(),
+            }],
+        )
+        .await
+        .expect_err("provider-native tool should be rejected before turn start");
+
+    assert_eq!(error.kind, ProviderErrorKind::UnsupportedCapability);
+    let records = store
+        .open_session(&session_id)
+        .records()
+        .expect("records should load");
+    assert_eq!(records.len(), 1);
+    assert!(matches!(
+        records[0].kind,
+        JournalRecordKind::SessionOpened(_)
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn interrupted_turn_does_not_rewrite_older_pending_approval() {
+    let dir = TempDir::new().expect("tempdir should exist");
+    let store = JournalStore::new(dir.path(), JournalConfig::default()).expect("journal store");
+    let adapter = Arc::new(RecordingFakeAdapter::new(vec![
+        vec![vec![
+            Ok(InternalEvent::ToolCallStarted {
+                call_id: "call-pending".to_string(),
+                name: "logos_echo".to_string(),
+            }),
+            Ok(InternalEvent::ToolCallArgumentsDelta {
+                call_id: "call-pending".to_string(),
+                delta: r#"{"text":"hi"}"#.to_string(),
+            }),
+            Ok(InternalEvent::ToolCallFinished {
+                call_id: "call-pending".to_string(),
+            }),
+            Ok(InternalEvent::Completed),
+        ]],
+        vec![vec![
+            Ok(InternalEvent::ToolCallStarted {
+                call_id: "call-interrupted".to_string(),
+                name: "logos_echo".to_string(),
+            }),
+            Ok(InternalEvent::ToolCallArgumentsDelta {
+                call_id: "call-interrupted".to_string(),
+                delta: r#"{"text":"bye"}"#.to_string(),
+            }),
+            Err(ProviderError::new(
+                "fake",
+                ProviderErrorKind::Transport,
+                "stream interrupted",
+            )),
+        ]],
+        vec![],
+    ]));
+    let mut session = SessionEngine::new(adapter.clone(), fake_model_ref(), None)
+        .await
+        .expect("session should build");
+    session.register_runtime_tool(runtime_tool_def("logos_echo"), Arc::new(EchoTool));
+    session.set_tool_execution_policy(ToolExecutionPolicy {
+        runtime_owned_default: ToolApprovalMode::RequireApproval,
+        ..ToolExecutionPolicy::default()
+    });
+    let approver = Arc::new(BlockingApprover::new());
+    let entered = approver
+        .entered_rx
+        .lock()
+        .expect("lock entered")
+        .take()
+        .unwrap();
+    session.set_tool_approver(approver);
+    session
+        .create_and_attach_journal(&store)
+        .expect("journal should attach");
+    let session_id = session.session_id().to_string();
+
+    let handle = tokio::spawn(async move {
+        session
+            .run_turn(vec![InternalMessage::user_text("need approval")])
+            .await
+    });
+    entered.await.expect("approval should enter");
+    handle.abort();
+
+    let mut resumed =
+        SessionEngine::resume_from_journal(adapter.clone(), store.open_session(&session_id))
+            .await
+            .expect("resume should succeed");
+    let error = resumed
+        .run_turn(vec![InternalMessage::user_text("interrupt next turn")])
+        .await
+        .expect_err("turn should fail");
+    assert_eq!(error.kind, ProviderErrorKind::Transport);
+
+    let resumed_again =
+        SessionEngine::resume_from_journal(adapter, store.open_session(&session_id))
+            .await
+            .expect("resume should succeed");
+    assert_eq!(resumed_again.approvals().len(), 1);
+    assert_eq!(resumed_again.approvals()[0].request.call_id, "call-pending");
+    assert_eq!(
+        resumed_again.approvals()[0].state,
+        ApprovalJournalState::Pending
+    );
 }
 
 async fn assert_terminal_after_restart(
@@ -679,6 +893,93 @@ type FakeSessionQueue = Arc<Mutex<VecDeque<FakeSessionScript>>>;
 struct RecordingFakeAdapter {
     sessions: FakeSessionQueue,
     requests: Arc<Mutex<Vec<logos_runtime_types::InternalTurnRequest>>>,
+}
+
+#[derive(Clone)]
+struct CompactionFakeAdapter {
+    sessions: FakeSessionQueue,
+}
+
+impl CompactionFakeAdapter {
+    fn new(sessions: Vec<Vec<Vec<Result<InternalEvent, ProviderError>>>>) -> Self {
+        Self {
+            sessions: Arc::new(Mutex::new(
+                sessions.into_iter().map(VecDeque::from).collect(),
+            )),
+        }
+    }
+}
+
+#[async_trait]
+impl ProviderAdapter for CompactionFakeAdapter {
+    fn provider_id(&self) -> &'static str {
+        "openai"
+    }
+
+    fn provider_capabilities(&self) -> ProviderCapabilitySet {
+        ProviderCapabilitySet {
+            supports_server_side_state: true,
+            supports_client_side_history: true,
+            supports_structured_output: false,
+            supports_context_cache: false,
+            supports_runtime_owned_tools: true,
+            supports_provider_builtin_tools: false,
+            supports_approval_control: true,
+            compaction_backend: CompactionBackendKind::NativeRemoteRewrite,
+            continuation_mode: ContinuationMode::ServerManaged,
+        }
+    }
+
+    fn model_capabilities(&self, _model: &ModelRef) -> ModelCapabilitySet {
+        ModelCapabilitySet {
+            supports_tool_calling: true,
+            supports_parallel_tools: false,
+            supports_tool_arg_streaming: false,
+            supports_provider_native_tool_calls: false,
+            supports_runtime_tool_reinjection: true,
+            supports_reasoning_deltas: false,
+            supports_opaque_reasoning_carryover: false,
+            supports_images: false,
+        }
+    }
+
+    async fn list_models(&self) -> Result<Vec<ModelMeta>, ProviderError> {
+        Ok(Vec::new())
+    }
+
+    async fn compact_history(
+        &self,
+        _request: InternalCompactionRequest,
+    ) -> Result<InternalCompactionResult, ProviderError> {
+        Ok(InternalCompactionResult {
+            replacement_messages: vec![
+                InternalMessage::User {
+                    parts: vec![ContentPart::Text {
+                        text: "hello".to_string(),
+                    }],
+                },
+                InternalMessage::Assistant {
+                    message_id: Some("msg-compact".to_string()),
+                    parts: vec![ContentPart::Text {
+                        text: "compacted".to_string(),
+                    }],
+                },
+            ],
+        })
+    }
+
+    async fn new_session(&self) -> Result<Box<dyn ProviderSession>, ProviderError> {
+        let turns = self
+            .sessions
+            .lock()
+            .expect("sessions lock")
+            .pop_front()
+            .expect("missing session script");
+        Ok(Box::new(RecordingFakeSession {
+            turns,
+            requests: Arc::new(Mutex::new(Vec::new())),
+        }))
+    }
 }
 
 impl RecordingFakeAdapter {

@@ -56,6 +56,7 @@ impl JournalSessionView {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ApprovalView {
+    pub turn_id: Option<String>,
     pub request: logos_runtime_types::ToolApprovalRequest,
     pub state: ApprovalJournalState,
 }

@@ -134,10 +134,11 @@ impl JournalSession {
                 JournalRecordKind::ContinuationUpdated { handle, .. } => {
                     view.continuation = handle;
                 }
-                JournalRecordKind::ApprovalStateChanged { approval, .. } => {
+                JournalRecordKind::ApprovalStateChanged { turn_id, approval } => {
                     view.approvals.insert(
                         approval.request.call_id.clone(),
                         ApprovalView {
+                            turn_id,
                             request: approval.request,
                             state: approval.state,
                         },
@@ -306,6 +307,7 @@ mod tests {
             view.approvals["call-1"].state,
             crate::ApprovalJournalState::Pending
         );
+        assert_eq!(view.approvals["call-1"].turn_id.as_deref(), Some("turn-1"));
     }
 
     fn opened() -> SessionOpenedRecord {

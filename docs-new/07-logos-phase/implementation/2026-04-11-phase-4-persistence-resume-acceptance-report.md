@@ -38,8 +38,9 @@ This report records the completed phase-4 persistence and resume slice for the c
 5. Stateless replay resume now works from the same journal family without pretending to have server-managed continuation.
 6. Pending and resolved approval state, tool terminal states, and interrupted branches are now restart-visible.
 7. Compaction checkpoints are now durable canonical messages with an explicit replay boundary, while provider compact output remains non-canonical.
-8. Raw provider snapshots remain optional debug-only data and are not required for correctness.
-9. No new Codex-base seam was required.
+8. Native remote compaction now fails without mutating live or durable state if the adapter does not return a real `InternalMessage::CompactionCheckpoint`.
+9. Raw provider snapshots remain optional debug-only data and are not required for correctness.
+10. No new Codex-base seam was required.
 
 ## Earlier Locked Inputs Preserved
 
@@ -75,12 +76,15 @@ Phase-4 builds on and preserves the following earlier accepted work:
 - Met for the current scope.
 - `pending_approval_survives_restart` proves pending approval is restart-visible.
 - `resolved_approval_survives_restart` proves resolved approval state survives restart.
+- `interrupted_turn_does_not_rewrite_older_pending_approval` proves an interrupted turn does not corrupt an older pending approval branch.
 - `tool_terminal_records_survive_restart_for_all_branch_shapes` proves completed, denied, failed-before-result, and interrupted tool terminal states reconstruct correctly after restart.
 
 ### A5. Compaction remains policy-safe
 
 - Met for the current scope.
 - `compaction_checkpoint_changes_replay_boundary_without_provider_snapshots` proves durable compaction checkpoints change replay state while raw provider compaction output is not required for correctness.
+- the same proof also verifies `CompactionApplied.checkpoint_sequence_id` points at the actual durable checkpoint record instead of the first retained message.
+- `native_compaction_without_checkpoint_fails_without_mutation` proves native compaction now rejects checkpoint-free replacement history before mutating `history`, `continuation`, or the durable journal.
 
 ### A6. Raw provider snapshots stay optional
 
@@ -162,6 +166,9 @@ No new seam was required for the phase-4 persistence/resume scope.
   symbol: `pending_approval_survives_restart`
   lines: `171-230`
 - path: `../../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`
+  symbol: `interrupted_turn_does_not_rewrite_older_pending_approval`
+  lines: `428-494`
+- path: `../../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`
   symbol: `resolved_approval_survives_restart`
   lines: `233-272`
 - path: `../../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`
@@ -169,7 +176,10 @@ No new seam was required for the phase-4 persistence/resume scope.
   lines: `275-297`
 - path: `../../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`
   symbol: `compaction_checkpoint_changes_replay_boundary_without_provider_snapshots`
-  lines: `300-348`
+  lines: `328-423`
+- path: `../../../codex-rs/logos-session-engine/tests/phase4_persistence.rs`
+  symbol: `locally_rejected_turn_does_not_write_orphan_started_turn`
+  lines: `385-426`
 - path: `2026-04-11-phase-4-persistence-resume-strict-spec.md`
   symbol: `Acceptance And Gates`
   lines: `199-235`
