@@ -1,13 +1,33 @@
 use super::*;
+use codex_app_server_client::DEFAULT_IN_PROCESS_CHANNEL_CAPACITY;
+use codex_core::config::ConfigOverrides;
+use codex_core::config_loader::CloudRequirementsLoader;
+use codex_core::config_loader::LoaderOverrides;
+use codex_feedback::CodexFeedback;
+use codex_model_provider_info::ModelProviderInfo;
+use codex_model_provider_info::WireApi;
 use codex_otel::set_parent_from_w3c_trace_context;
 use codex_protocol::config_types::ApprovalsReviewer;
+use codex_protocol::protocol::SessionSource;
+use codex_utils_absolute_path::AbsolutePathBuf;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::trace::TraceId;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use pretty_assertions::assert_eq;
+use serde_json::json;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::Mutex;
 use tempfile::tempdir;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
+use wiremock::Mock;
+use wiremock::MockServer;
+use wiremock::Request;
+use wiremock::Respond;
+use wiremock::ResponseTemplate;
+use wiremock::matchers::method;
+use wiremock::matchers::path;
 
 fn test_tracing_subscriber() -> impl tracing::Subscriber + Send + Sync {
     let provider = SdkTracerProvider::builder().build();
@@ -238,6 +258,92 @@ async fn resume_lookup_model_providers_filters_only_last_lookup() {
     assert_eq!(resume_lookup_model_providers(&config, &named_args), None);
 }
 
+#[tokio::test]
+async fn openrouter_beta_exec_session_dispatches_into_real_exec_lane() {
+    let server = MockServer::start().await;
+    let workspace = tempdir().expect("workspace tempdir");
+    std::fs::write(workspace.path().join("note.txt"), "hello from workspace")
+        .expect("write workspace file");
+    let last_message_path = workspace.path().join("last-message.txt");
+
+    Mock::given(method("POST"))
+        .and(path("/api/v1/responses"))
+        .respond_with(SequencedOpenRouterResponder::default())
+        .expect(2)
+        .mount(&server)
+        .await;
+
+    let config = test_openrouter_exec_config(
+        workspace.path().to_path_buf(),
+        format!("{}/api/v1", server.uri()),
+    )
+    .await;
+
+    run_exec_session(ExecRunArgs {
+        in_process_start_args: test_in_process_start_args(config.clone()),
+        command: None,
+        config,
+        dangerously_bypass_approvals_and_sandbox: false,
+        exec_span: exec_root_span(),
+        images: Vec::new(),
+        json_mode: false,
+        last_message_file: Some(last_message_path.clone()),
+        model_provider: None,
+        oss: false,
+        output_schema_path: None,
+        prompt: Some("inspect note.txt".to_string()),
+        skip_git_repo_check: true,
+        stderr_with_ansi: false,
+    })
+    .await
+    .expect("openrouter exec dispatch should succeed");
+
+    let last_message = std::fs::read_to_string(&last_message_path)
+        .expect("last message should be written through exec lane");
+    assert_eq!(last_message, "The file says hello from workspace.");
+}
+
+#[tokio::test]
+async fn openrouter_beta_exec_session_rejects_resume_before_dispatch() {
+    let workspace = tempdir().expect("workspace tempdir");
+    let config = test_openrouter_exec_config(
+        workspace.path().to_path_buf(),
+        "https://example.com/api/v1".to_string(),
+    )
+    .await;
+
+    let error = run_exec_session(ExecRunArgs {
+        in_process_start_args: test_in_process_start_args(config.clone()),
+        command: Some(ExecCommand::Resume(crate::cli::ResumeArgs {
+            session_id: Some("thread-1".to_string()),
+            last: false,
+            all: false,
+            images: Vec::new(),
+            prompt: Some("continue".to_string()),
+        })),
+        config,
+        dangerously_bypass_approvals_and_sandbox: false,
+        exec_span: exec_root_span(),
+        images: Vec::new(),
+        json_mode: false,
+        last_message_file: None,
+        model_provider: None,
+        oss: false,
+        output_schema_path: None,
+        prompt: None,
+        skip_git_repo_check: true,
+        stderr_with_ansi: false,
+    })
+    .await
+    .expect_err("resume should be rejected on openrouter beta lane");
+
+    assert!(
+        error
+            .to_string()
+            .contains("supports only new user turns; resume and review remain unavailable")
+    );
+}
+
 #[test]
 fn turn_items_for_thread_returns_matching_turn_items() {
     let thread = AppServerThread {
@@ -291,6 +397,103 @@ fn turn_items_for_thread_returns_matching_turn_items() {
         }])
     );
     assert_eq!(turn_items_for_thread(&thread, "missing-turn"), None);
+}
+
+async fn test_openrouter_exec_config(cwd: PathBuf, base_url: String) -> Config {
+    let codex_home = tempdir().expect("home tempdir");
+    let mut config = ConfigBuilder::default()
+        .codex_home(codex_home.path().to_path_buf())
+        .harness_overrides(ConfigOverrides {
+            cwd: Some(cwd.clone()),
+            ..Default::default()
+        })
+        .build()
+        .await
+        .expect("build config");
+    config.cwd = AbsolutePathBuf::from_absolute_path(cwd).expect("absolute cwd");
+    config.model_provider_id = "openrouter-test".to_string();
+    config.model = Some("openai/o4-mini".to_string());
+    config.model_provider = ModelProviderInfo {
+        name: "OpenRouter test".to_string(),
+        base_url: Some(base_url),
+        env_key: None,
+        env_key_instructions: None,
+        experimental_bearer_token: Some("test-key".to_string()),
+        auth: None,
+        wire_api: WireApi::Responses,
+        query_params: None,
+        http_headers: None,
+        env_http_headers: None,
+        request_max_retries: Some(0),
+        stream_max_retries: Some(0),
+        stream_idle_timeout_ms: Some(1000),
+        websocket_connect_timeout_ms: None,
+        requires_openai_auth: false,
+        supports_websockets: false,
+    };
+    config
+}
+
+fn test_in_process_start_args(config: Config) -> InProcessClientStartArgs {
+    InProcessClientStartArgs {
+        arg0_paths: codex_arg0::Arg0DispatchPaths::default(),
+        config: Arc::new(config),
+        cli_overrides: Vec::new(),
+        loader_overrides: LoaderOverrides::default(),
+        cloud_requirements: CloudRequirementsLoader::default(),
+        feedback: CodexFeedback::new(),
+        config_warnings: Vec::new(),
+        session_source: SessionSource::Exec,
+        enable_codex_api_key_env: false,
+        client_name: "codex-exec-test".to_string(),
+        client_version: "0.0.0-test".to_string(),
+        experimental_api: true,
+        opt_out_notification_methods: Vec::new(),
+        channel_capacity: DEFAULT_IN_PROCESS_CHANNEL_CAPACITY,
+    }
+}
+
+#[derive(Default)]
+struct SequencedOpenRouterResponder {
+    next: Arc<Mutex<usize>>,
+}
+
+impl Respond for SequencedOpenRouterResponder {
+    fn respond(&self, _request: &Request) -> ResponseTemplate {
+        let mut next = self.next.lock().expect("response lock");
+        let response = match *next {
+            0 => ResponseTemplate::new(200).set_body_json(json!({
+                "id": "resp-1",
+                "output": [{
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "workspace_read_file",
+                    "arguments": "{\"path\":\"note.txt\"}"
+                }],
+                "usage": {"input_tokens": 10, "output_tokens": 3, "total_tokens": 13},
+                "status": "completed"
+            })),
+            1 => ResponseTemplate::new(200).set_body_json(json!({
+                "id": "resp-2",
+                "output": [{
+                    "type": "message",
+                    "id": "msg-2",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [{
+                        "type": "output_text",
+                        "text": "The file says hello from workspace.",
+                        "annotations": []
+                    }]
+                }],
+                "usage": {"input_tokens": 16, "output_tokens": 6, "total_tokens": 22},
+                "status": "completed"
+            })),
+            _ => ResponseTemplate::new(500),
+        };
+        *next += 1;
+        response
+    }
 }
 
 #[test]

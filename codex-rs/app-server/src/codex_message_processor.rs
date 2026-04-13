@@ -249,6 +249,7 @@ use codex_mcp::mcp::auth::discover_supported_scopes;
 use codex_mcp::mcp::auth::resolve_oauth_scopes;
 use codex_mcp::mcp::collect_mcp_snapshot;
 use codex_mcp::mcp::group_tools_by_server;
+use codex_model_provider_info::is_openrouter_provider_id;
 use codex_models_manager::collaboration_mode_presets::CollaborationModesConfig;
 use codex_protocol::ThreadId;
 use codex_protocol::config_types::CollaborationMode;
@@ -2265,6 +2266,23 @@ impl CodexMessageProcessor {
         }
 
         let dynamic_tools = dynamic_tools.unwrap_or_default();
+        if openrouter_beta_is_exec_only(&config.model_provider_id) {
+            listener_task_context
+                .outgoing
+                .send_error(
+                    request_id,
+                    JSONRPCErrorError {
+                        code: INVALID_REQUEST_ERROR_CODE,
+                        message: format!(
+                            "OpenRouter beta threads are currently available only through `codex exec` so the request enters the `logos-provider-openrouter` runtime lane. Interactive app-server and TUI thread/start paths are not wired to that beta lane yet for provider `{}`.",
+                            config.model_provider_id
+                        ),
+                        data: None,
+                    },
+                )
+                .await;
+            return;
+        }
         let core_dynamic_tools = if dynamic_tools.is_empty() {
             Vec::new()
         } else {
@@ -8799,6 +8817,10 @@ pub(crate) fn summary_to_thread(summary: ConversationSummary) -> Thread {
     }
 }
 
+fn openrouter_beta_is_exec_only(provider_id: &str) -> bool {
+    is_openrouter_provider_id(provider_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -8837,6 +8859,13 @@ mod tests {
             defer_loading: false,
         }];
         validate_dynamic_tools(&tools).expect("valid schema");
+    }
+
+    #[test]
+    fn openrouter_beta_provider_ids_are_marked_exec_only_for_app_server() {
+        assert!(openrouter_beta_is_exec_only("openrouter"));
+        assert!(openrouter_beta_is_exec_only("openrouter-tuned"));
+        assert!(!openrouter_beta_is_exec_only("openai"));
     }
 
     #[test]
