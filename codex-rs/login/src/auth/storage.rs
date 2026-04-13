@@ -132,7 +132,7 @@ impl AuthStorageBackend for FileAuthStorage {
     }
 }
 
-const KEYRING_SERVICE: &str = "Codex Auth";
+const KEYRING_SERVICE: &str = "LOGOS Auth";
 
 // turns codex_home path into a stable, short key string
 fn compute_store_key(codex_home: &Path) -> std::io::Result<String> {

@@ -177,3 +177,31 @@ refresh_interval_ms = 0
     assert_eq!(auth.refresh_interval_ms, 0);
     assert_eq!(auth.refresh_interval(), None);
 }
+
+#[test]
+fn built_in_model_providers_include_openrouter_beta() {
+    let providers = built_in_model_providers(/*openai_base_url*/ None);
+    let provider = providers
+        .get(OPENROUTER_PROVIDER_ID)
+        .expect("openrouter provider should exist");
+
+    assert_eq!(provider.name, "OpenRouter beta");
+    assert_eq!(
+        provider.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert_eq!(provider.env_key.as_deref(), Some("OPENROUTER_API_KEY"));
+    assert_eq!(provider.request_max_retries, None);
+    assert_eq!(provider.stream_max_retries, None);
+    assert_eq!(provider.stream_idle_timeout_ms, None);
+    assert!(!provider.requires_openai_auth);
+    assert!(!provider.supports_websockets);
+}
+
+#[test]
+fn openrouter_provider_id_helper_matches_builtin_and_custom_ids() {
+    assert!(is_openrouter_provider_id("openrouter"));
+    assert!(is_openrouter_provider_id("openrouter-tuned"));
+    assert!(!is_openrouter_provider_id("openroutertuned"));
+    assert!(!is_openrouter_provider_id("openai"));
+}

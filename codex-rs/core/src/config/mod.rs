@@ -64,7 +64,10 @@ use codex_model_provider_info::ModelProviderInfo;
 use codex_model_provider_info::OLLAMA_CHAT_PROVIDER_REMOVED_ERROR;
 use codex_model_provider_info::OLLAMA_OSS_PROVIDER_ID;
 use codex_model_provider_info::OPENAI_PROVIDER_ID;
+use codex_model_provider_info::OPENROUTER_PROVIDER_ID;
+use codex_model_provider_info::OPENROUTER_VALIDATED_MODEL_ID;
 use codex_model_provider_info::built_in_model_providers;
+use codex_model_provider_info::is_openrouter_provider_id;
 use codex_models_manager::ModelsManagerConfig;
 use codex_protocol::config_types::AltScreenMode;
 use codex_protocol::config_types::ForcedLoginMethod;
@@ -149,8 +152,9 @@ pub(crate) const DEFAULT_AGENT_JOB_MAX_RUNTIME_SECONDS: Option<u64> = None;
 
 pub const CONFIG_TOML_FILE: &str = "config.toml";
 const OPENAI_BASE_URL_ENV_VAR: &str = "OPENAI_BASE_URL";
-const RESERVED_MODEL_PROVIDER_IDS: [&str; 3] = [
+const RESERVED_MODEL_PROVIDER_IDS: [&str; 4] = [
     OPENAI_PROVIDER_ID,
+    OPENROUTER_PROVIDER_ID,
     OLLAMA_OSS_PROVIDER_ID,
     LMSTUDIO_OSS_PROVIDER_ID,
 ];
@@ -2335,6 +2339,17 @@ impl Config {
                 std::io::Error::new(std::io::ErrorKind::NotFound, message)
             })?
             .clone();
+        if is_openrouter_provider_id(&model_provider_id) {
+            startup_warnings.push(format!(
+                "OpenRouter beta support is currently validated only for `{OPENROUTER_VALIDATED_MODEL_ID}`. Replay-first history is used, and compaction replay remains unsupported in this beta path."
+            ));
+            if model_provider_id == OPENROUTER_PROVIDER_ID {
+                startup_warnings.push(
+                    "Built-in `openrouter` stays immutable. To tune retry or timeout knobs for the OpenRouter beta path, define and select a custom provider id such as `openrouter-tuned`."
+                        .to_string(),
+                );
+            }
+        }
 
         let shell_environment_policy = cfg.shell_environment_policy.into();
         let allow_login_shell = cfg.allow_login_shell.unwrap_or(true);

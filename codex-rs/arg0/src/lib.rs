@@ -200,12 +200,12 @@ fn build_runtime() -> anyhow::Result<tokio::runtime::Runtime> {
     Ok(builder.build()?)
 }
 
-const ILLEGAL_ENV_VAR_PREFIX: &str = "CODEX_";
+const ILLEGAL_ENV_VAR_PREFIXES: [&str; 2] = ["CODEX_", "LOGOS_"];
 
-/// Load env vars from ~/.codex/.env.
+/// Load env vars from `LOGOS_HOME/.env`.
 ///
 /// Security: Do not allow `.env` files to create or modify any variables
-/// with names starting with `CODEX_`.
+/// with names starting with `CODEX_` or `LOGOS_`.
 fn load_dotenv() {
     if let Ok(codex_home) = find_codex_home()
         && let Ok(iter) = dotenvy::from_path_iter(codex_home.join(".env"))
@@ -214,13 +214,18 @@ fn load_dotenv() {
     }
 }
 
-/// Helper to set vars from a dotenvy iterator while filtering out `CODEX_` keys.
+/// Helper to set vars from a dotenvy iterator while filtering out internal
+/// `CODEX_` and `LOGOS_` keys.
 fn set_filtered<I>(iter: I)
 where
     I: IntoIterator<Item = Result<(String, String), dotenvy::Error>>,
 {
     for (key, value) in iter.into_iter().flatten() {
-        if !key.to_ascii_uppercase().starts_with(ILLEGAL_ENV_VAR_PREFIX) {
+        let upper = key.to_ascii_uppercase();
+        if !ILLEGAL_ENV_VAR_PREFIXES
+            .iter()
+            .any(|prefix| upper.starts_with(prefix))
+        {
             // It is safe to call set_var() because our process is
             // single-threaded at this point in its execution.
             unsafe { std::env::set_var(&key, &value) };
@@ -420,6 +425,7 @@ mod tests {
     use super::LOCK_FILENAME;
     use super::janitor_cleanup;
     use super::linux_sandbox_exe_path;
+    use super::set_filtered;
     use std::fs;
     use std::fs::File;
     use std::path::Path;
@@ -495,5 +501,34 @@ mod tests {
 
         assert!(!dir.exists());
         Ok(())
+    }
+
+    #[test]
+    fn dotenv_filter_blocks_codex_and_logos_internal_keys() {
+        unsafe {
+            std::env::remove_var("CODEX_HOME");
+            std::env::remove_var("LOGOS_HOME");
+            std::env::remove_var("LOGOS_SQLITE_HOME");
+            std::env::remove_var("OPENROUTER_API_KEY");
+        }
+
+        set_filtered(vec![
+            Ok(("CODEX_HOME".to_string(), "legacy-home".to_string())),
+            Ok(("LOGOS_HOME".to_string(), "logos-home".to_string())),
+            Ok(("LOGOS_SQLITE_HOME".to_string(), "logos-sqlite".to_string())),
+            Ok(("OPENROUTER_API_KEY".to_string(), "key-123".to_string())),
+        ]);
+
+        assert_eq!(std::env::var("CODEX_HOME").ok(), None);
+        assert_eq!(std::env::var("LOGOS_HOME").ok(), None);
+        assert_eq!(std::env::var("LOGOS_SQLITE_HOME").ok(), None);
+        assert_eq!(
+            std::env::var("OPENROUTER_API_KEY").ok(),
+            Some("key-123".to_string())
+        );
+
+        unsafe {
+            std::env::remove_var("OPENROUTER_API_KEY");
+        }
     }
 }

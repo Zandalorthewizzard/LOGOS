@@ -20,6 +20,8 @@ use codex_config::types::Notifications;
 use codex_config::types::ToolSuggestDiscoverableType;
 use codex_features::Feature;
 use codex_features::FeaturesToml;
+use codex_model_provider_info::OPENROUTER_PROVIDER_ID;
+use codex_model_provider_info::OPENROUTER_VALIDATED_MODEL_ID;
 use codex_model_provider_info::WireApi;
 use codex_models_manager::bundled_models_response;
 use codex_protocol::permissions::FileSystemAccessMode;
@@ -4544,6 +4546,86 @@ fn metrics_exporter_defaults_to_statsig_when_missing() -> std::io::Result<()> {
     )?;
 
     assert_eq!(config.otel.metrics_exporter, OtelExporterKind::Statsig);
+    Ok(())
+}
+
+#[test]
+fn openrouter_builtin_provider_can_be_selected_from_config() -> std::io::Result<()> {
+    let cfg: ConfigToml = toml::from_str(
+        r#"
+model_provider = "openrouter"
+model = "openai/o4-mini"
+"#,
+    )
+    .expect("valid openrouter config toml");
+
+    let codex_home = TempDir::new().unwrap();
+    let config = Config::load_from_base_config_with_overrides(
+        cfg,
+        ConfigOverrides {
+            cwd: Some(codex_home.path().to_path_buf()),
+            ..Default::default()
+        },
+        codex_home.path().to_path_buf(),
+    )?;
+
+    assert_eq!(config.model_provider_id, OPENROUTER_PROVIDER_ID);
+    assert_eq!(config.model.as_deref(), Some(OPENROUTER_VALIDATED_MODEL_ID));
+    assert_eq!(
+        config.model_provider.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert_eq!(
+        config.model_provider.env_key.as_deref(),
+        Some("OPENROUTER_API_KEY")
+    );
+    assert!(config.startup_warnings.iter().any(|warning| {
+        warning.contains(OPENROUTER_VALIDATED_MODEL_ID)
+            && warning.contains("compaction replay remains unsupported")
+    }));
+    assert!(config.startup_warnings.iter().any(|warning| {
+        warning.contains("Built-in `openrouter` stays immutable")
+            && warning.contains("openrouter-tuned")
+    }));
+    Ok(())
+}
+
+#[test]
+fn openrouter_custom_provider_can_tune_retry_and_timeout_knobs() -> std::io::Result<()> {
+    let cfg: ConfigToml = toml::from_str(
+        r#"
+[model_providers.openrouter-tuned]
+name = "OpenRouter Custom"
+base_url = "https://openrouter.ai/api/v1"
+env_key = "OPENROUTER_API_KEY"
+request_max_retries = 7
+stream_max_retries = 8
+stream_idle_timeout_ms = 9000
+"#,
+    )
+    .expect("valid openrouter custom provider toml");
+
+    let codex_home = TempDir::new().unwrap();
+    let config = Config::load_from_base_config_with_overrides(
+        cfg,
+        ConfigOverrides {
+            model_provider: Some("openrouter-tuned".to_string()),
+            cwd: Some(codex_home.path().to_path_buf()),
+            ..Default::default()
+        },
+        codex_home.path().to_path_buf(),
+    )?;
+
+    assert_eq!(config.model_provider.request_max_retries(), 7);
+    assert_eq!(config.model_provider.stream_max_retries(), 8);
+    assert_eq!(
+        config.model_provider.stream_idle_timeout().as_millis(),
+        9000
+    );
+    assert!(config.startup_warnings.iter().any(|warning| {
+        warning.contains(OPENROUTER_VALIDATED_MODEL_ID)
+            && warning.contains("compaction replay remains unsupported")
+    }));
     Ok(())
 }
 
