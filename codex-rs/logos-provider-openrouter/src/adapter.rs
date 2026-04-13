@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use codex_model_provider_info::OPENROUTER_VALIDATED_MODEL_ID;
 use futures::stream;
 use logos_provider_api::ProviderAdapter;
 use logos_provider_api::ProviderEventStream;
@@ -65,9 +66,9 @@ impl ProviderAdapter for OpenRouterAdapter {
             supports_client_side_history: true,
             supports_structured_output: false,
             supports_context_cache: false,
-            supports_runtime_owned_tools: false,
+            supports_runtime_owned_tools: true,
             supports_provider_builtin_tools: false,
-            supports_approval_control: false,
+            supports_approval_control: true,
             compaction_backend: CompactionBackendKind::Disabled,
             continuation_mode: ContinuationMode::ClientManaged,
         }
@@ -75,11 +76,11 @@ impl ProviderAdapter for OpenRouterAdapter {
 
     fn model_capabilities(&self, _model: &ModelRef) -> ModelCapabilitySet {
         ModelCapabilitySet {
-            supports_tool_calling: false,
+            supports_tool_calling: true,
             supports_parallel_tools: false,
             supports_tool_arg_streaming: false,
             supports_provider_native_tool_calls: false,
-            supports_runtime_tool_reinjection: false,
+            supports_runtime_tool_reinjection: true,
             supports_reasoning_deltas: false,
             supports_opaque_reasoning_carryover: false,
             supports_images: false,
@@ -90,7 +91,7 @@ impl ProviderAdapter for OpenRouterAdapter {
         Ok(vec![ModelMeta {
             model_ref: self.config.model_ref.clone(),
             display_name: self.config.model_ref.model_id.clone(),
-            provider_label: "OpenRouter".to_string(),
+            provider_label: format!("OpenRouter beta (validated: {OPENROUTER_VALIDATED_MODEL_ID})"),
             context_window: None,
             default_output_mode: OutputMode::Text,
         }])
@@ -103,7 +104,7 @@ impl ProviderAdapter for OpenRouterAdapter {
         Err(ProviderError::new(
             OPENROUTER_PROVIDER_ID,
             ProviderErrorKind::UnsupportedCapability,
-            "OpenRouter validation adapter does not implement native compaction",
+            "OpenRouter beta adapter does not implement native compaction",
         ))
     }
 
@@ -191,9 +192,20 @@ mod tests {
         );
         assert!(!provider.provider_capabilities().supports_structured_output);
         assert!(
-            !provider
+            provider
+                .provider_capabilities()
+                .supports_runtime_owned_tools
+        );
+        assert!(provider.provider_capabilities().supports_approval_control);
+        assert!(
+            provider
                 .model_capabilities(&provider.config.model_ref)
                 .supports_tool_calling
+        );
+        assert!(
+            provider
+                .model_capabilities(&provider.config.model_ref)
+                .supports_runtime_tool_reinjection
         );
     }
 }

@@ -13,10 +13,20 @@ use logos_provider_openrouter::OpenRouterAdapterConfig;
 use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalEvent;
 use logos_runtime_types::InternalMessage;
+use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::ModelRef;
 use logos_runtime_types::ProviderError;
 use logos_runtime_types::ProviderErrorKind;
+use logos_runtime_types::ToolApprovalMode;
+use logos_runtime_types::ToolApprovalOutcome;
+use logos_runtime_types::ToolApprovalRequest;
+use logos_runtime_types::ToolCallResultDisposition;
+use logos_runtime_types::ToolCallTerminalState;
+use logos_runtime_types::ToolExecutionKind;
+use logos_runtime_types::ToolExecutionPolicy;
 use logos_session_engine::SessionEngine;
+use logos_tool_runtime::RuntimeToolExecutor;
+use logos_tool_runtime::ToolExecutionOutput;
 use pretty_assertions::assert_eq;
 use reqwest::Client;
 use serde_json::json;
@@ -250,6 +260,360 @@ async fn openrouter_unsupported_parameter_and_limit_behavior_is_explicit() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn openrouter_runtime_tool_roundtrip_reinjects_tool_result_and_finishes_turn() {
+    let server = MockServer::start().await;
+    mount_openrouter_json_response(
+        &server,
+        json!({
+            "model": OPENROUTER_MODEL,
+            "input": [{
+                "type": "message",
+                "role": "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": "use the echo tool"
+                }]
+            }],
+            "tools": [runtime_tool_declaration_json("logos_echo")]
+        }),
+        json!({
+            "id": "resp-1",
+            "output": [{
+                "type": "function_call",
+                "call_id": "call-1",
+                "name": "logos_echo",
+                "arguments": "{\"text\":\"hi\"}"
+            }],
+            "usage": {
+                "input_tokens": 14,
+                "output_tokens": 5,
+                "total_tokens": 19
+            },
+            "status": "completed"
+        }),
+    )
+    .await;
+    mount_openrouter_json_response(
+        &server,
+        json!({
+            "model": OPENROUTER_MODEL,
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "use the echo tool"
+                    }]
+                },
+                {
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "logos_echo",
+                    "arguments": "{\"text\":\"hi\"}"
+                },
+                {
+                    "type": "function_call_output",
+                    "call_id": "call-1",
+                    "output": "{\"text\":\"hi\"}"
+                }
+            ],
+            "tools": [runtime_tool_declaration_json("logos_echo")]
+        }),
+        json!({
+            "id": "resp-2",
+            "output": [{
+                "type": "message",
+                "id": "msg-2",
+                "role": "assistant",
+                "status": "completed",
+                "content": [{
+                    "type": "output_text",
+                    "text": "Echoed hi.",
+                    "annotations": []
+                }]
+            }],
+            "usage": {
+                "input_tokens": 19,
+                "output_tokens": 4,
+                "total_tokens": 23
+            },
+            "status": "completed"
+        }),
+    )
+    .await;
+
+    let adapter = build_openrouter_adapter(&server);
+    let mut session = SessionEngine::new(adapter, openrouter_model_ref(), None)
+        .await
+        .expect("session should build");
+    session.register_runtime_tool(runtime_tool_def("logos_echo"), Arc::new(EchoTool));
+    session.set_tool_execution_policy(ToolExecutionPolicy {
+        runtime_owned_default: ToolApprovalMode::AutoApprove,
+        ..ToolExecutionPolicy::default()
+    });
+
+    let outcome = session
+        .run_turn(vec![InternalMessage::user_text("use the echo tool")])
+        .await
+        .expect("runtime tool roundtrip should succeed");
+
+    assert!(outcome.events.contains(&InternalEvent::ApprovalRequested {
+        request: ToolApprovalRequest {
+            call_id: "call-1".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            mcp_correlation: None,
+        },
+    }));
+    assert!(outcome.events.contains(&InternalEvent::ApprovalResolved {
+        call_id: "call-1".to_string(),
+        outcome: ToolApprovalOutcome::Approved,
+    }));
+    assert!(outcome.events.contains(&InternalEvent::ToolCallStarted {
+        call_id: "call-1".to_string(),
+        name: "logos_echo".to_string(),
+    }));
+    assert!(outcome.events.contains(&InternalEvent::TextDelta {
+        text: "Echoed hi.".to_string(),
+    }));
+    assert!(outcome.events.contains(&InternalEvent::ToolCallTerminal {
+        record: logos_runtime_types::ToolCallRecord {
+            call_id: "call-1".to_string(),
+            tool_name: "logos_echo".to_string(),
+            execution: ToolExecutionKind::RuntimeOwned,
+            terminal_state: ToolCallTerminalState::CompletedWithResult,
+            mcp_correlation: None,
+            result_disposition: ToolCallResultDisposition::Success,
+        },
+    }));
+    assert!(session.history().iter().any(|message| {
+        message
+            == &InternalMessage::AssistantToolCall {
+                call_id: "call-1".to_string(),
+                name: "logos_echo".to_string(),
+                arguments: json!({"text": "hi"}),
+            }
+    }));
+    assert!(session.history().iter().any(|message| {
+        message
+            == &InternalMessage::ToolResult {
+                call_id: "call-1".to_string(),
+                output: json!({"text": "hi"}),
+                is_error: false,
+            }
+    }));
+    assert_eq!(
+        session.continuation(),
+        Some(&ContinuationHandle::ClientManagedHistory)
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn openrouter_follow_up_after_tool_execution_replays_journal_history() {
+    let dir = TempDir::new().expect("tempdir should exist");
+    let store = JournalStore::new(dir.path(), JournalConfig::default()).expect("journal store");
+    let server = MockServer::start().await;
+    mount_openrouter_json_response(
+        &server,
+        json!({
+            "model": OPENROUTER_MODEL,
+            "input": [{
+                "type": "message",
+                "role": "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": "use the echo tool"
+                }]
+            }],
+            "tools": [runtime_tool_declaration_json("logos_echo")]
+        }),
+        json!({
+            "id": "resp-1",
+            "output": [{
+                "type": "function_call",
+                "call_id": "call-1",
+                "name": "logos_echo",
+                "arguments": "{\"text\":\"hi\"}"
+            }],
+            "usage": {
+                "input_tokens": 14,
+                "output_tokens": 5,
+                "total_tokens": 19
+            },
+            "status": "completed"
+        }),
+    )
+    .await;
+    mount_openrouter_json_response(
+        &server,
+        json!({
+            "model": OPENROUTER_MODEL,
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "use the echo tool"
+                    }]
+                },
+                {
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "logos_echo",
+                    "arguments": "{\"text\":\"hi\"}"
+                },
+                {
+                    "type": "function_call_output",
+                    "call_id": "call-1",
+                    "output": "{\"text\":\"hi\"}"
+                }
+            ],
+            "tools": [runtime_tool_declaration_json("logos_echo")]
+        }),
+        json!({
+            "id": "resp-2",
+            "output": [{
+                "type": "message",
+                "id": "msg-2",
+                "role": "assistant",
+                "status": "completed",
+                "content": [{
+                    "type": "output_text",
+                    "text": "Echoed hi.",
+                    "annotations": []
+                }]
+            }],
+            "usage": {
+                "input_tokens": 19,
+                "output_tokens": 4,
+                "total_tokens": 23
+            },
+            "status": "completed"
+        }),
+    )
+    .await;
+    mount_openrouter_json_response(
+        &server,
+        json!({
+            "model": OPENROUTER_MODEL,
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "use the echo tool"
+                    }]
+                },
+                {
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "logos_echo",
+                    "arguments": "{\"text\":\"hi\"}"
+                },
+                {
+                    "type": "function_call_output",
+                    "call_id": "call-1",
+                    "output": "{\"text\":\"hi\"}"
+                },
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{
+                        "type": "output_text",
+                        "text": "Echoed hi.",
+                        "annotations": []
+                    }],
+                    "id": "msg-2",
+                    "status": "completed"
+                },
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "What tool ran before?"
+                    }]
+                }
+            ]
+        }),
+        json!({
+            "id": "resp-3",
+            "output": [{
+                "type": "message",
+                "id": "msg-3",
+                "role": "assistant",
+                "status": "completed",
+                "content": [{
+                    "type": "output_text",
+                    "text": "The logos_echo tool ran before.",
+                    "annotations": []
+                }]
+            }],
+            "usage": {
+                "input_tokens": 27,
+                "output_tokens": 7,
+                "total_tokens": 34
+            },
+            "status": "completed"
+        }),
+    )
+    .await;
+
+    let adapter = build_openrouter_adapter(&server);
+    let mut session = SessionEngine::new(adapter.clone(), openrouter_model_ref(), None)
+        .await
+        .expect("session should build");
+    session
+        .create_and_attach_journal(&store)
+        .expect("journal should attach");
+    session.register_runtime_tool(runtime_tool_def("logos_echo"), Arc::new(EchoTool));
+    let session_id = session.session_id().to_string();
+
+    session
+        .run_turn(vec![InternalMessage::user_text("use the echo tool")])
+        .await
+        .expect("tool turn should succeed");
+
+    let journal = store.open_session(&session_id);
+    let mut resumed = SessionEngine::resume_from_journal(adapter, journal)
+        .await
+        .expect("resume should succeed");
+    resumed
+        .run_turn(vec![InternalMessage::user_text("What tool ran before?")])
+        .await
+        .expect("follow-up should succeed");
+
+    let requests = server.received_requests().await.unwrap_or_default();
+    assert_eq!(requests.len(), 3);
+    let third = requests[2]
+        .body_json::<serde_json::Value>()
+        .expect("body json");
+    assert!(third.get("previous_response_id").is_none());
+    assert_eq!(third["input"].as_array().map(Vec::len), Some(5));
+    assert_eq!(third["input"][1]["type"].as_str(), Some("function_call"));
+    assert_eq!(third["input"][1]["call_id"].as_str(), Some("call-1"));
+    assert_eq!(
+        third["input"][1]["arguments"].as_str(),
+        Some("{\"text\":\"hi\"}")
+    );
+    assert_eq!(
+        third["input"][2]["type"].as_str(),
+        Some("function_call_output")
+    );
+    assert_eq!(third["input"][2]["call_id"].as_str(), Some("call-1"));
+    assert_eq!(
+        third["input"][2]["output"].as_str(),
+        Some("{\"text\":\"hi\"}")
+    );
+    assert_eq!(third["input"][3]["role"].as_str(), Some("assistant"));
+    assert_eq!(third["input"][3]["id"].as_str(), Some("msg-2"));
+    assert_eq!(third["input"][4]["role"].as_str(), Some("user"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn openai_no_regression_scope_still_uses_previous_response_id() {
     let adapter = Arc::new(RecordingOpenAiAdapter::default());
     let mut session = SessionEngine::new(adapter.clone(), openai_model_ref(), None)
@@ -317,6 +681,71 @@ async fn mount_openrouter_text_response(
         .expect(1)
         .mount(server)
         .await;
+}
+
+async fn mount_openrouter_json_response(
+    server: &MockServer,
+    expected_body: serde_json::Value,
+    response_body: serde_json::Value,
+) {
+    Mock::given(method("POST"))
+        .and(path("/api/v1/responses"))
+        .and(body_json(expected_body))
+        .respond_with(ResponseTemplate::new(200).set_body_json(response_body))
+        .expect(1)
+        .mount(server)
+        .await;
+}
+
+fn runtime_tool_declaration_json(name: &str) -> serde_json::Value {
+    json!({
+        "type": "function",
+        "name": name,
+        "description": format!("Runtime tool {name}"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
+        }
+    })
+}
+
+fn runtime_tool_def(name: &str) -> InternalToolDef {
+    InternalToolDef {
+        name: name.to_string(),
+        description: format!("Runtime tool {name}"),
+        input_schema: json!({
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            },
+            "required": ["text"]
+        }),
+        output_schema: Some(json!({
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"}
+            }
+        })),
+        execution: ToolExecutionKind::RuntimeOwned,
+        metadata: Default::default(),
+    }
+}
+
+struct EchoTool;
+
+#[async_trait::async_trait]
+impl RuntimeToolExecutor for EchoTool {
+    async fn execute(
+        &self,
+        call: &logos_tool_runtime::PendingToolCall,
+    ) -> Result<ToolExecutionOutput, String> {
+        Ok(ToolExecutionOutput::success(json!({
+            "text": call.arguments()["text"].as_str().unwrap_or_default()
+        })))
+    }
 }
 
 fn openrouter_model_ref() -> ModelRef {

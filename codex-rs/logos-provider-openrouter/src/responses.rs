@@ -31,6 +31,12 @@ pub enum OpenRouterOutputItem {
         role: String,
         content: Vec<OpenRouterOutputContentPart>,
     },
+    #[serde(rename = "function_call")]
+    FunctionCall {
+        call_id: String,
+        name: String,
+        arguments: String,
+    },
     #[serde(other)]
     Unknown,
 }
@@ -73,53 +79,72 @@ pub fn map_response(
     }
 
     let mut events = Vec::new();
-    let mut saw_assistant = false;
+    let mut saw_output = false;
     for item in envelope.output {
-        let OpenRouterOutputItem::Message { id, role, content } = item else {
-            continue;
-        };
-        if role != "assistant" {
-            continue;
-        }
-        let message_id = id.ok_or_else(|| {
-            ProviderError::new(
-                OPENROUTER_PROVIDER_ID,
-                ProviderErrorKind::InvalidRequest,
-                "OpenRouter response omitted assistant message id required for replay",
-            )
-        })?;
-        events.push(InternalEvent::MessageStarted {
-            message_id: Some(message_id.clone()),
-        });
-        let mut saw_text = false;
-        for part in content {
-            if let OpenRouterOutputContentPart::OutputText { text } = part
-                && !text.is_empty()
-            {
-                saw_text = true;
-                events.push(InternalEvent::TextDelta { text });
+        match item {
+            OpenRouterOutputItem::Message { id, role, content } => {
+                if role != "assistant" {
+                    continue;
+                }
+                let message_id = id.ok_or_else(|| {
+                    ProviderError::new(
+                        OPENROUTER_PROVIDER_ID,
+                        ProviderErrorKind::InvalidRequest,
+                        "OpenRouter response omitted assistant message id required for replay",
+                    )
+                })?;
+                events.push(InternalEvent::MessageStarted {
+                    message_id: Some(message_id.clone()),
+                });
+                let mut saw_text = false;
+                for part in content {
+                    if let OpenRouterOutputContentPart::OutputText { text } = part
+                        && !text.is_empty()
+                    {
+                        saw_text = true;
+                        events.push(InternalEvent::TextDelta { text });
+                    }
+                }
+                if !saw_text {
+                    return Err(ProviderError::new(
+                        OPENROUTER_PROVIDER_ID,
+                        ProviderErrorKind::UnsupportedCapability,
+                        "OpenRouter beta adapter expected assistant text output when an assistant message is present",
+                    ));
+                }
+                events.push(InternalEvent::MessageCompleted {
+                    message_id: Some(message_id),
+                });
+                saw_output = true;
             }
+            OpenRouterOutputItem::FunctionCall {
+                call_id,
+                name,
+                arguments,
+            } => {
+                events.push(InternalEvent::ToolCallStarted {
+                    call_id: call_id.clone(),
+                    name,
+                });
+                if !arguments.is_empty() {
+                    events.push(InternalEvent::ToolCallArgumentsDelta {
+                        call_id: call_id.clone(),
+                        delta: arguments,
+                    });
+                }
+                events.push(InternalEvent::ToolCallFinished { call_id });
+                saw_output = true;
+            }
+            OpenRouterOutputItem::Unknown => {}
         }
-        if !saw_text {
-            return Err(ProviderError::new(
-                OPENROUTER_PROVIDER_ID,
-                ProviderErrorKind::UnsupportedCapability,
-                "OpenRouter validation adapter expected assistant text output in the current scope",
-            ));
-        }
-        events.push(InternalEvent::MessageCompleted {
-            message_id: Some(message_id),
-        });
-        saw_assistant = true;
-        break;
     }
 
-    if !saw_assistant {
+    if !saw_output {
         return Err(ProviderError::new(
             OPENROUTER_PROVIDER_ID,
             ProviderErrorKind::InvalidRequest,
             format!(
-                "OpenRouter response '{}' did not contain an assistant message",
+                "OpenRouter response '{}' did not contain an assistant message or tool call",
                 envelope.id.unwrap_or_else(|| "<unknown>".to_string())
             ),
         ));
@@ -305,6 +330,49 @@ mod tests {
                 InternalEvent::Usage {
                     input_tokens: 12,
                     output_tokens: 4,
+                },
+                InternalEvent::ContinuationUpdated {
+                    handle: ContinuationHandle::ClientManagedHistory,
+                },
+                InternalEvent::Completed,
+            ]
+        );
+    }
+
+    #[test]
+    fn maps_tool_call_response_into_internal_events() {
+        let response: OpenRouterResponsesEnvelope = serde_json::from_value(json!({
+            "id": "resp-tool-1",
+            "output": [{
+                "type": "function_call",
+                "call_id": "call-1",
+                "name": "logos_echo",
+                "arguments": "{\"text\":\"hi\"}"
+            }],
+            "usage": {
+                "input_tokens": 21,
+                "output_tokens": 5
+            }
+        }))
+        .expect("response should parse");
+
+        assert_eq!(
+            map_response(response).expect("response should map"),
+            vec![
+                InternalEvent::ToolCallStarted {
+                    call_id: "call-1".to_string(),
+                    name: "logos_echo".to_string(),
+                },
+                InternalEvent::ToolCallArgumentsDelta {
+                    call_id: "call-1".to_string(),
+                    delta: "{\"text\":\"hi\"}".to_string(),
+                },
+                InternalEvent::ToolCallFinished {
+                    call_id: "call-1".to_string(),
+                },
+                InternalEvent::Usage {
+                    input_tokens: 21,
+                    output_tokens: 5,
                 },
                 InternalEvent::ContinuationUpdated {
                     handle: ContinuationHandle::ClientManagedHistory,

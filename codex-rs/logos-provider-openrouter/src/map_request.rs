@@ -4,11 +4,13 @@ use serde_json::Value;
 use logos_runtime_types::ContentPart;
 use logos_runtime_types::ContinuationHandle;
 use logos_runtime_types::InternalMessage;
+use logos_runtime_types::InternalToolDef;
 use logos_runtime_types::InternalTurnRequest;
 use logos_runtime_types::OutputMode;
 use logos_runtime_types::ProviderError;
 use logos_runtime_types::ProviderErrorKind;
 use logos_runtime_types::ReasoningPolicy;
+use logos_runtime_types::ToolExecutionKind;
 
 const OPENROUTER_PROVIDER_ID: &str = "openrouter";
 
@@ -16,6 +18,8 @@ const OPENROUTER_PROVIDER_ID: &str = "openrouter";
 pub struct OpenRouterResponsesRequest {
     pub model: String,
     pub input: Vec<OpenRouterInputItem>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tools: Vec<OpenRouterTool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_output_tokens: Option<u64>,
 }
@@ -32,6 +36,14 @@ pub enum OpenRouterInputItem {
         #[serde(skip_serializing_if = "Option::is_none")]
         status: Option<String>,
     },
+    #[serde(rename = "function_call")]
+    FunctionCall {
+        call_id: String,
+        name: String,
+        arguments: String,
+    },
+    #[serde(rename = "function_call_output")]
+    FunctionCallOutput { call_id: String, output: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -43,6 +55,17 @@ pub enum OpenRouterContentPart {
     OutputText {
         text: String,
         annotations: Vec<Value>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "type")]
+pub enum OpenRouterTool {
+    #[serde(rename = "function")]
+    Function {
+        name: String,
+        description: String,
+        parameters: Value,
     },
 }
 
@@ -69,6 +92,11 @@ pub fn map_turn_request(
     Ok(OpenRouterResponsesRequest {
         model: request.model_ref.model_id.clone(),
         input,
+        tools: request
+            .tools
+            .iter()
+            .map(map_tool_def)
+            .collect::<Result<Vec<_>, _>>()?,
         max_output_tokens: request.limits.max_output_tokens,
     })
 }
@@ -103,12 +131,17 @@ fn reject_unsupported_controls(request: &InternalTurnRequest) -> Result<(), Prov
         ));
     }
 
-    if !request.tools.is_empty() {
-        return Err(ProviderError::new(
-            OPENROUTER_PROVIDER_ID,
-            ProviderErrorKind::UnsupportedCapability,
-            "OpenRouter validation adapter does not support tools in the current text-only scope",
-        ));
+    for tool in &request.tools {
+        if tool.execution == ToolExecutionKind::ProviderNative {
+            return Err(ProviderError::new(
+                OPENROUTER_PROVIDER_ID,
+                ProviderErrorKind::UnsupportedCapability,
+                format!(
+                    "OpenRouter beta adapter does not support provider-native tool '{}'",
+                    tool.name
+                ),
+            ));
+        }
     }
 
     if request.limits.max_input_tokens.is_some() || request.limits.timeout_ms.is_some() {
@@ -145,12 +178,45 @@ fn map_message(message: &InternalMessage) -> Result<OpenRouterInputItem, Provide
                 status: Some("completed".to_string()),
             })
         }
-        InternalMessage::AssistantToolCall { .. }
-        | InternalMessage::CompactionCheckpoint { .. }
-        | InternalMessage::ToolResult { .. } => Err(ProviderError::new(
+        InternalMessage::AssistantToolCall {
+            call_id,
+            name,
+            arguments,
+        } => Ok(OpenRouterInputItem::FunctionCall {
+            call_id: call_id.clone(),
+            name: name.clone(),
+            arguments: arguments.to_string(),
+        }),
+        InternalMessage::ToolResult {
+            call_id, output, ..
+        } => Ok(OpenRouterInputItem::FunctionCallOutput {
+            call_id: call_id.clone(),
+            output: output.to_string(),
+        }),
+        InternalMessage::CompactionCheckpoint { .. } => Err(ProviderError::new(
             OPENROUTER_PROVIDER_ID,
             ProviderErrorKind::UnsupportedCapability,
-            "OpenRouter validation adapter cannot replay tool or compaction records in the current scope",
+            "OpenRouter beta adapter cannot replay compaction records yet",
+        )),
+    }
+}
+
+fn map_tool_def(tool: &InternalToolDef) -> Result<OpenRouterTool, ProviderError> {
+    match tool.execution {
+        ToolExecutionKind::RuntimeOwned | ToolExecutionKind::McpBackedRuntime => {
+            Ok(OpenRouterTool::Function {
+                name: tool.name.clone(),
+                description: tool.description.clone(),
+                parameters: tool.input_schema.clone(),
+            })
+        }
+        ToolExecutionKind::ProviderNative => Err(ProviderError::new(
+            OPENROUTER_PROVIDER_ID,
+            ProviderErrorKind::UnsupportedCapability,
+            format!(
+                "OpenRouter beta adapter does not support provider-native tool '{}'",
+                tool.name
+            ),
         )),
     }
 }
@@ -194,17 +260,20 @@ mod tests {
 
     use logos_runtime_types::ContinuationHandle;
     use logos_runtime_types::InternalMessage;
+    use logos_runtime_types::InternalToolDef;
     use logos_runtime_types::InternalTurnRequest;
     use logos_runtime_types::ModelRef;
     use logos_runtime_types::OutputMode;
     use logos_runtime_types::ProviderErrorKind;
     use logos_runtime_types::ReasoningPolicy;
+    use logos_runtime_types::ToolExecutionKind;
     use logos_runtime_types::TurnLimits;
     use pretty_assertions::assert_eq;
 
     use super::OpenRouterContentPart;
     use super::OpenRouterInputItem;
     use super::OpenRouterResponsesRequest;
+    use super::OpenRouterTool;
     use super::map_turn_request;
 
     #[test]
@@ -242,6 +311,93 @@ mod tests {
                         status: Some("completed".to_string()),
                     },
                 ],
+                tools: Vec::new(),
+                max_output_tokens: Some(256),
+            }
+        );
+    }
+
+    #[test]
+    fn maps_runtime_tools_and_tool_replay_items() {
+        let mut request = request();
+        request.tools = vec![InternalToolDef {
+            name: "logos_echo".to_string(),
+            description: "Echo text".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"}
+                },
+                "required": ["text"]
+            }),
+            output_schema: None,
+            execution: ToolExecutionKind::RuntimeOwned,
+            metadata: BTreeMap::new(),
+        }];
+        request.messages.extend([
+            InternalMessage::AssistantToolCall {
+                call_id: "call-1".to_string(),
+                name: "logos_echo".to_string(),
+                arguments: serde_json::json!({"text": "hi"}),
+            },
+            InternalMessage::ToolResult {
+                call_id: "call-1".to_string(),
+                output: serde_json::json!({"text": "hi"}),
+                is_error: false,
+            },
+        ]);
+
+        assert_eq!(
+            map_turn_request(&request).expect("map should succeed"),
+            OpenRouterResponsesRequest {
+                model: "openai/o4-mini".to_string(),
+                input: vec![
+                    OpenRouterInputItem::Message {
+                        role: "system".to_string(),
+                        content: vec![OpenRouterContentPart::InputText {
+                            text: "You are helpful".to_string(),
+                        }],
+                        id: None,
+                        status: None,
+                    },
+                    OpenRouterInputItem::Message {
+                        role: "user".to_string(),
+                        content: vec![OpenRouterContentPart::InputText {
+                            text: "hello".to_string(),
+                        }],
+                        id: None,
+                        status: None,
+                    },
+                    OpenRouterInputItem::Message {
+                        role: "assistant".to_string(),
+                        content: vec![OpenRouterContentPart::OutputText {
+                            text: "hi".to_string(),
+                            annotations: Vec::new(),
+                        }],
+                        id: Some("msg-1".to_string()),
+                        status: Some("completed".to_string()),
+                    },
+                    OpenRouterInputItem::FunctionCall {
+                        call_id: "call-1".to_string(),
+                        name: "logos_echo".to_string(),
+                        arguments: "{\"text\":\"hi\"}".to_string(),
+                    },
+                    OpenRouterInputItem::FunctionCallOutput {
+                        call_id: "call-1".to_string(),
+                        output: "{\"text\":\"hi\"}".to_string(),
+                    },
+                ],
+                tools: vec![OpenRouterTool::Function {
+                    name: "logos_echo".to_string(),
+                    description: "Echo text".to_string(),
+                    parameters: serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }),
+                }],
                 max_output_tokens: Some(256),
             }
         );
@@ -271,6 +427,27 @@ mod tests {
         let error = map_turn_request(&request).expect_err("map should fail");
         assert_eq!(error.kind, ProviderErrorKind::UnsupportedCapability);
         assert!(error.message.contains("UNKNOWN"));
+    }
+
+    #[test]
+    fn rejects_provider_native_tools() {
+        let mut request = request();
+        request.tools = vec![InternalToolDef {
+            name: "provider_search".to_string(),
+            description: "Search".to_string(),
+            input_schema: serde_json::json!({"type": "object"}),
+            output_schema: None,
+            execution: ToolExecutionKind::ProviderNative,
+            metadata: BTreeMap::new(),
+        }];
+
+        let error = map_turn_request(&request).expect_err("map should fail");
+        assert_eq!(error.kind, ProviderErrorKind::UnsupportedCapability);
+        assert!(
+            error
+                .message
+                .contains("provider-native tool 'provider_search'")
+        );
     }
 
     fn request() -> InternalTurnRequest {

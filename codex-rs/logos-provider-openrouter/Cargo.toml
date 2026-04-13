@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+codex-model-provider-info = { workspace = true }
 futures = { workspace = true }
 logos-provider-api = { workspace = true }
 logos-runtime-types = { workspace = true }
