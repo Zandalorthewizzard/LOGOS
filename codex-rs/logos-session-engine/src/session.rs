@@ -132,6 +132,15 @@ impl SessionEngine {
         &self.tool_call_records
     }
 
+    pub fn seed_history(
+        &mut self,
+        history: Vec<InternalMessage>,
+        continuation: Option<ContinuationHandle>,
+    ) {
+        self.history = history;
+        self.continuation = continuation;
+    }
+
     pub fn approvals(&self) -> &[logos_journal::ApprovalView] {
         &self.approvals
     }

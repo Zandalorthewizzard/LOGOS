@@ -7,6 +7,12 @@ tags: [roadmap, logos, implementation, architecture]
 related:
   [
     [README.md],
+    [
+      ../architecture/2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-discussion.md,
+    ],
+    [../architecture/2026-04-11-local-validation-post-mvp-milestone-discussion.md],
+    [../architecture/2026-04-11-glm-zai-post-mvp-milestone-discussion.md],
+    [../architecture/2026-04-11-gemini-post-mvp-milestone-discussion.md],
     [../architecture/2026-04-08-logos-plugin-system-future-discussion.md],
     [../architecture/2026-04-08-logos-plugin-system-architecture-direction.md],
     [../architecture/2026-04-03-logos-compaction-strategy-discussion.md],
@@ -40,7 +46,7 @@ Build LOGOS as a Codex-derived, adapter-first runtime that preserves the full-fi
 
 ### MVP Scope
 
-The first meaningful LOGOS MVP is reached when the adapter boundary is real, OpenAI remains full-fidelity, and at least two non-canonical provider paths validate the boundary in different ways.
+The first meaningful LOGOS MVP is reached when the adapter boundary is real, OpenAI remains full-fidelity, OpenRouter is usable as a live beta path, and the provider foundation is stable enough to onboard future providers without reopening the already-closed runtime phases.
 
 ### MVP Required Providers And Adapters
 
@@ -50,26 +56,26 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
    - must support OpenAI continuation/resume
    - must support the first working tool roundtrip boundary
 2. `logos-provider-openrouter`
-   - stateless validation adapter
-   - proves client-managed history and graceful degradation
-3. `logos-provider-gemini`
-   - compatibility-important MVP provider
-   - proves Logos can handle a provider that matters commercially but has both OpenAI-compat and native semantic differences
+    - first non-canonical beta provider
+    - proves client-managed history and graceful degradation
+    - supplies the live model surface for concept-stage testing
 
 ### MVP Non-goals
 
-1. LM Studio is not required for MVP ship, but remains a strong dev/local validation target.
+1. LM Studio is not required for MVP ship and is now explicitly a post-MVP local-validation milestone.
 2. Ollama is not required for MVP ship.
-3. Z.AI is not required for MVP ship.
-4. Provider-native feature parity across all providers is not required for MVP ship.
+3. Gemini is not required for MVP ship and is now explicitly a post-MVP provider milestone.
+4. GLM/Z.AI is not required for MVP ship and is now explicitly a post-MVP provider milestone.
+5. Provider-native feature parity across all providers is not required for MVP ship.
 
 ### MVP Exit Criteria
 
 1. OpenAI path works through the new boundary without semantic regression.
-2. OpenRouter works as a stateless validation adapter.
-3. Gemini works in at least one supported mode with explicit capability differences documented.
-4. Logos has a working minimal persistence/resume story for canonical and stateless modes.
-5. Tool roundtrip exists at least for the OpenAI path and the shared runtime seam is proven.
+2. OpenRouter works as a real agent beta path with explicit degraded-capability behavior, live-session usability, and runtime-owned tool support where the provider path can honestly sustain it.
+3. LOGOS has a working minimal persistence/resume story for canonical and stateless modes.
+4. Tool roundtrip exists at least for the OpenAI path and the shared runtime seam is proven.
+5. Provider foundation is stable enough that later provider milestones do not need to reopen phase-1 through phase-5 runtime contracts.
+6. A releasable `LOGOS 0.1 beta` build and documentation posture exist.
 
 ## Phase 0: Research And Source Stabilization
 
@@ -191,41 +197,53 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 1. OpenRouter is usable as a validation adapter.
 2. OpenAI path remains unchanged in semantics.
 
-## Phase 6: Local Validation Targets
+## Phase 6: OpenRouter Beta Hardening And Provider Foundation
 
 ### Goals
 
-1. Add LM Studio as a dev/local validation path.
-2. Decide whether Ollama belongs in 0.1 or later.
-3. Validate local continuation and tool behavior where practical.
+1. Harden OpenRouter from a bounded validation slice into a live beta path.
+2. Stabilize provider capability, metadata, and adapter-conformance foundations for future providers.
+3. Produce the release-ready posture for `LOGOS 0.1 beta`.
+4. Prove OpenRouter as an agent-grade beta path rather than only a text and replay path.
 
 ### Deliverables
 
-1. LM Studio compatibility notes and adapter mode decisions.
-2. Optional dev-only local adapter(s).
+1. OpenRouter beta-hardening work around configuration, credentials, model selection, explicit degradation, and runtime-owned tools.
+2. A provider-foundation baseline that future adapters can target without reopening closed OpenAI and runtime semantics.
+3. A release checklist and install/run guidance for `LOGOS 0.1 beta`.
+4. Live OpenRouter validation findings that feed later provider milestones.
 
 ### Exit Criteria
 
-1. Local validation path exists for offline/dev workflows.
-2. Local behavior is clearly documented as canonical or non-canonical.
+1. OpenRouter is usable for real agent beta testing, not only test-harness proofs.
+2. `LOGOS 0.1 beta` is buildable and releasable.
+3. Future provider milestones can start from a stable provider foundation instead of reopening MVP runtime design.
 
-## Phase 7: Native Provider Expansion
+### Canonical Planning Inputs
 
-### Goals
+1. `../architecture/2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-discussion.md`
+2. `2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-strict-spec.md`
 
-1. Evaluate Gemini native path.
-2. Evaluate Z.AI native path.
-3. Decide which provider-native features deserve first-class exposure.
+## Post-MVP Provider Milestones
 
-### Deliverables
+### Local Validation Milestone
 
-1. Capability-driven expansion plan.
-2. Prototype-backed decisions for native adapters.
+1. Local and offline validation are now explicitly post-MVP.
+2. LM Studio remains the first preferred local target.
+3. Ollama remains deferred until LM Studio findings justify a second local path.
+4. See `../architecture/2026-04-11-local-validation-post-mvp-milestone-discussion.md`.
 
-### Exit Criteria
+### GLM Z.AI Milestone
 
-1. Provider expansion is driven by evidence and product value.
-2. No native provider support is added by pretending it is just OpenAI compat.
+1. GLM/Z.AI is now a post-MVP provider-expansion milestone.
+2. Its first implementation should be evidence-backed and may be native, compatible, or mixed-mode depending on the narrowest honest path.
+3. See `../architecture/2026-04-11-glm-zai-post-mvp-milestone-discussion.md`.
+
+### Gemini Milestone
+
+1. Gemini is now a post-MVP provider-expansion milestone.
+2. The first Gemini path should follow provider-foundation hardening and use capability-first narrowing.
+3. See `../architecture/2026-04-11-gemini-post-mvp-milestone-discussion.md`.
 
 ## Post-MVP Future Direction: Plugin System And Extension Host
 
@@ -239,7 +257,7 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 
 1. Architecture shaping can happen earlier.
 2. Real host implementation should wait until phase 4 makes runtime authority around persistence, resume, and compaction stable enough.
-3. The first serious pluginization move is more realistic after phase 5 or phase 6, once LOGOS has at least one non-canonical provider path and one durable runtime path.
+3. The first serious pluginization move is more realistic after phase 6 or the first post-MVP provider milestone, once LOGOS has one live non-canonical provider path and one durable runtime path.
 
 ### Companion Planning Inputs
 
@@ -268,10 +286,9 @@ The first meaningful LOGOS MVP is reached when the adapter boundary is real, Ope
 
 ## Immediate Next Milestones
 
-1. Author the first strict implementation spec.
-2. Create crate skeletons for phase 1.
-3. Define prototype checklist for OpenAI resume, OpenRouter replay, and MCP tool roundtrip.
-4. Decide the persistence schema design approach before broad coding.
+1. Lock the discussion/spec package for phase-6 OpenRouter beta hardening and provider foundation work.
+2. Define the release checklist for `LOGOS 0.1 beta`.
+3. Keep local validation, Gemini, and GLM/Z.AI as post-MVP milestone planning until OpenRouter beta feedback exists.
 
 ## Evidence
 

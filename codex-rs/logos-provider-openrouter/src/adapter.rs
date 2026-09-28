@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use codex_model_provider_info::OPENROUTER_VALIDATED_MODEL_ID;
@@ -19,6 +20,7 @@ use logos_runtime_types::ProviderCapabilitySet;
 use logos_runtime_types::ProviderError;
 use logos_runtime_types::ProviderErrorKind;
 use reqwest::Client;
+use reqwest::Url;
 
 use crate::map_request::map_turn_request;
 use crate::responses::OpenRouterErrorBody;
@@ -35,6 +37,10 @@ pub struct OpenRouterAdapterConfig {
     pub base_url: String,
     pub api_key: String,
     pub model_ref: ModelRef,
+    pub default_headers: reqwest::header::HeaderMap,
+    pub query_params: Vec<(String, String)>,
+    pub request_max_retries: u64,
+    pub request_timeout: Duration,
 }
 
 #[derive(Clone)]
@@ -122,41 +128,79 @@ impl ProviderSession for OpenRouterSession {
         request: InternalTurnRequest,
     ) -> Result<ProviderEventStream, ProviderError> {
         let payload = map_turn_request(&request)?;
-        let response = self
-            .config
-            .client
-            .post(format!(
-                "{}/responses",
-                self.config.base_url.trim_end_matches('/')
-            ))
-            .bearer_auth(&self.config.api_key)
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|error| transport_error(error.to_string()))?;
-        let status = response.status();
-        if !status.is_success() {
-            let body = response
-                .text()
+        let url = build_responses_url(&self.config)?;
+        let mut attempt = 0;
+        loop {
+            let response = self
+                .config
+                .client
+                .post(url.clone())
+                .headers(self.config.default_headers.clone())
+                .bearer_auth(&self.config.api_key)
+                .timeout(self.config.request_timeout)
+                .json(&payload)
+                .send()
+                .await
+                .map_err(|error| transport_error(error.to_string()));
+
+            let response = match response {
+                Ok(response) => response,
+                Err(error) => {
+                    if error.retryable && attempt < self.config.request_max_retries {
+                        attempt += 1;
+                        continue;
+                    }
+                    return Err(error);
+                }
+            };
+
+            let status = response.status();
+            if !status.is_success() {
+                let body = response
+                    .text()
+                    .await
+                    .map_err(|error| transport_error(error.to_string()))?;
+                let error = match serde_json::from_str::<OpenRouterErrorBody>(&body) {
+                    Ok(error) => map_http_error_response(status.as_u16(), error),
+                    Err(parse_error) => {
+                        map_http_error_fallback(status.as_u16(), &body, &parse_error.to_string())
+                    }
+                };
+                if error.retryable && attempt < self.config.request_max_retries {
+                    attempt += 1;
+                    continue;
+                }
+                return Err(error);
+            }
+
+            let envelope = response
+                .json::<OpenRouterResponsesEnvelope>()
                 .await
                 .map_err(|error| transport_error(error.to_string()))?;
-            return match serde_json::from_str::<OpenRouterErrorBody>(&body) {
-                Ok(error) => Err(map_http_error_response(status.as_u16(), error)),
-                Err(parse_error) => Err(map_http_error_fallback(
-                    status.as_u16(),
-                    &body,
-                    &parse_error.to_string(),
-                )),
-            };
+            let events = map_response(envelope)?;
+            return Ok(Box::pin(stream::iter(events.into_iter().map(Ok))));
         }
-
-        let envelope = response
-            .json::<OpenRouterResponsesEnvelope>()
-            .await
-            .map_err(|error| transport_error(error.to_string()))?;
-        let events = map_response(envelope)?;
-        Ok(Box::pin(stream::iter(events.into_iter().map(Ok))))
     }
+}
+
+fn build_responses_url(config: &OpenRouterAdapterConfig) -> Result<Url, ProviderError> {
+    let base_url = format!("{}/responses", config.base_url.trim_end_matches('/'));
+    let mut url = Url::parse(&base_url).map_err(|error| {
+        ProviderError::new(
+            OPENROUTER_PROVIDER_ID,
+            ProviderErrorKind::InvalidRequest,
+            format!("invalid OpenRouter base URL `{base_url}`: {error}"),
+        )
+    })?;
+    if !config.query_params.is_empty() {
+        url.query_pairs_mut().extend_pairs(
+            config
+                .query_params
+                .iter()
+                .map(|(key, value)| (key.as_str(), value.as_str())),
+        );
+    }
+    Ok(url)
 }
 
 fn transport_error(message: String) -> ProviderError {
@@ -171,6 +215,8 @@ fn transport_error(message: String) -> ProviderError {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use logos_provider_api::ProviderAdapter;
     use logos_runtime_types::ContinuationMode;
 
@@ -184,6 +230,10 @@ mod tests {
                 provider_id: "openrouter".to_string(),
                 model_id: "openai/o4-mini".to_string(),
             },
+            default_headers: reqwest::header::HeaderMap::new(),
+            query_params: Vec::new(),
+            request_max_retries: 0,
+            request_timeout: Duration::from_secs(30),
         });
 
         assert_eq!(

@@ -10,8 +10,34 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 4. `docs-new/01-concepts/discussion-first.md`
 5. `docs-new/02-guides/agent-navigation.md`
 6. `docs-new/02-guides/working-notes.md`
-7. `notes/README.md`
-8. `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+7. `docs-new/02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
+8. `notes/README.md`
+9. `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+
+## META-CONSENSUS
+
+This section records the current project-level strategic consensus so agents do not rely on chat memory or outdated assumptions.
+
+- Treat this section as the active planning stance unless the user explicitly supersedes it.
+- If canonical docs and this section diverge, surface the conflict and prefer the newer explicit user decision until docs are synchronized.
+
+### Before the current consensus
+
+- Placeholder for future strategic shift tracking.
+- No large LOGOS paradigm shift currently requires a full historical contrast block here yet.
+- The MVP scope reduction toward preserved OpenAI plus OpenRouter beta was meaningful, but it is currently documented well enough in the roadmap and phase-6 docs without needing a stronger historical migration block.
+
+### Current consensus
+
+- LOGOS is a Codex-derived, adapter-first runtime built around a preserved OpenAI `Responses` path.
+- OpenAI remains the canonical parity target and must not be degraded for abstraction purity.
+- Additional providers must be integrated through honest capability-aware adapters, not fake sameness.
+- Narrow additive seams around Codex are preferred over broad `codex-core` rewrites.
+- Runtime-owned tools, approvals, journal, replay, and resume remain LOGOS-owned authority above provider wires.
+- LOGOS owns session, state, context, and thread semantics above provider wires; provider-native continuation, compaction, and richer control features are provider-first backends with honest fallback into LOGOS-owned implementations only when semantics remain valid.
+- The current beta expression of this philosophy is: preserved OpenAI path, OpenRouter agent beta path, and stable provider foundation before provider breadth.
+- Canonical philosophy doc: `docs-new/07-logos-phase/architecture/2026-04-11-logos-philosophy-and-invariants.md`
+- Applied ownership model doc: `docs-new/07-logos-phase/architecture/2026-04-14-logos-session-state-ownership-and-provider-native-backend-model-discussion.md`
 
 ## Core Rules
 
@@ -40,6 +66,15 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 2. Then strict spec.
 3. Then implementation.
 4. If blind zones appear during implementation, route back to discussion/spec before widening the change.
+5. Before drafting or revising a spec, task, sprint, or implementation slice, read `docs-new/02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md` and carry its residual-risk and adjacent-open-surface accounting into the artifact.
+
+## Execution Agent Orchestration
+
+1. Use `docs-new/02-guides/operations/2026-04-14-orchestrated-agent-loop.md` as the default external-agent implementation and review loop.
+2. If the user says `GLM 5.1` is executing the slice, use `docs-new/02-guides/operations/2026-04-14-glm-5.1-agent-profile.md` for slice sizing, task wording, and the mandatory report template.
+3. Prefer one bounded external-agent slice per pass, followed by independent review and a narrower next task if closure is not proven.
+4. If the user brings a large external research package, use `docs-new/02-guides/operations/2026-04-16-research-transfer-and-dual-consensus-validation.md` before turning research findings into specs or tasks.
+5. For every bounded external-agent slice, use `docs-new/02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md` to keep residual risks, stale owner logic, and adjacent-open surfaces explicit.
 
 ## Working Notes
 
@@ -49,10 +84,24 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 4. Keep lightweight development logs under `notes/devlog/` when a branch accumulates meaningful implementation milestones.
 5. Store branch summaries and PR summaries in `notes/devlog/` so future agents can recover intent without reconstructing git history from scratch.
 
+## Build Cache Strategy
+
+1. Keep `codex-rs/target` as a junction to `D:\BuildCache\LOGOS\target`; do not recreate a real workspace-local `target` on `C:`.
+2. During active implementation passes, keep the cache warm and do not clean it between normal iterations.
+3. If space pressure grows, prefer clearing `D:\BuildCache\LOGOS\target\debug\incremental` before wiping the full cache.
+4. Before beta or release proof, or if cache corruption is suspected, do one clean rebuild from an empty `D:\BuildCache\LOGOS\target`.
+
 ## Current Primary Architecture Lane
 
 1. Use `docs-new/07-logos-phase/` as the main architecture lane for current Logos adapter and Codex-fork planning.
 2. Imported working materials remain staged in `input-docs-temp/`, but the active normalized docs live in `docs-new/`.
+
+## Current MVP Boundary
+
+1. The current MVP target is a preserved OpenAI path, a beta-ready OpenRouter path, and a stable provider foundation for future adapters.
+2. Local validation, Gemini, and GLM/Z.AI are post-MVP milestones unless a newer strict spec explicitly pulls one of them forward.
+3. Do not widen current implementation scope from OpenRouter beta hardening into additional provider integrations without an updated roadmap-backed discussion/spec package.
+4. `LOGOS 0.1 beta` is scoped as an OpenRouter agent beta, not only a live-model beta; phase-6 remains open until the OpenRouter path reaches honest runtime-owned tool support through the existing LOGOS seams.
 
 ## Evidence
 
@@ -65,15 +114,40 @@ LOGOS is a Codex-derived project with its own documentation system, architecture
 - path: `docs-new/02-guides/working-notes.md`
   symbol: `Agent Working Notes Guide`
   lines: 1-200
+- path: `docs-new/02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
+  symbol: `Mandatory Reading Triggers`
+  lines: 1-240
+- path: `docs-new/02-guides/operations/2026-04-14-orchestrated-agent-loop.md`
+  symbol: `Default Loop`
+  lines: 1-220
+- path: `docs-new/02-guides/operations/2026-04-14-glm-5.1-agent-profile.md`
+  symbol: `Tasking Rules For This Agent`
+  lines: 1-220
+- path: `docs-new/02-guides/operations/2026-04-16-research-transfer-and-dual-consensus-validation.md`
+  symbol: `Default Workflow`
+  lines: 1-260
 - path: `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
   symbol: `LOGOS Codex-Core Seam Index`
   lines: 1-200
+- path: `docs-new/07-logos-phase/implementation/2026-03-30-logos-global-roadmap.md`
+  symbol: `LOGOS Global Roadmap`
+  lines: 1-280
+- path: `docs-new/07-logos-phase/architecture/2026-04-14-logos-session-state-ownership-and-provider-native-backend-model-discussion.md`
+  symbol: `LOGOS Session-State Ownership And Provider-Native Backend Model Discussion`
+  lines: 1-220
 
 ## Links
 
 - `docs-new/00-navigation/INDEX.md`
+- `docs-new/02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
 - `docs-new/07-logos-phase/README.md`
+- `docs-new/07-logos-phase/architecture/2026-04-11-logos-philosophy-and-invariants.md`
+- `docs-new/07-logos-phase/architecture/2026-04-14-logos-session-state-ownership-and-provider-native-backend-model-discussion.md`
+- `docs-new/07-logos-phase/implementation/2026-03-30-logos-global-roadmap.md`
 - `docs-new/07-logos-phase/implementation/2026-04-03-codex-core-seam-index.md`
+- `docs-new/02-guides/operations/2026-04-14-orchestrated-agent-loop.md`
+- `docs-new/02-guides/operations/2026-04-14-glm-5.1-agent-profile.md`
+- `docs-new/02-guides/operations/2026-04-16-research-transfer-and-dual-consensus-validation.md`
 - `docs-new/02-guides/working-notes.md`
 - `notes/README.md`
 

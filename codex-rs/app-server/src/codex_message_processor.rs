@@ -10,6 +10,8 @@ use crate::fuzzy_file_search::FuzzyFileSearchSession;
 use crate::fuzzy_file_search::run_fuzzy_file_search;
 use crate::fuzzy_file_search::start_fuzzy_file_search_session;
 use crate::models::supported_models;
+use crate::openrouter_beta_threads::OpenRouterBetaThreadManager;
+use crate::openrouter_beta_threads::openrouter_thread_operation_unsupported;
 use crate::outgoing_message::ConnectionId;
 use crate::outgoing_message::ConnectionRequestId;
 use crate::outgoing_message::OutgoingMessageSender;
@@ -17,6 +19,7 @@ use crate::outgoing_message::RequestContext;
 use crate::outgoing_message::ThreadScopedOutgoingMessageSender;
 use crate::thread_status::ThreadWatchManager;
 use crate::thread_status::resolve_thread_status;
+use base64::Engine;
 use chrono::DateTime;
 use chrono::SecondsFormat;
 use chrono::Utc;
@@ -111,12 +114,18 @@ use codex_app_server_protocol::SkillsConfigWriteParams;
 use codex_app_server_protocol::SkillsConfigWriteResponse;
 use codex_app_server_protocol::SkillsListParams;
 use codex_app_server_protocol::SkillsListResponse;
+use codex_app_server_protocol::TerminalInteractionNotification;
 use codex_app_server_protocol::Thread;
 use codex_app_server_protocol::ThreadArchiveParams;
 use codex_app_server_protocol::ThreadArchiveResponse;
 use codex_app_server_protocol::ThreadArchivedNotification;
+use codex_app_server_protocol::ThreadBackgroundTerminalStartParams;
+use codex_app_server_protocol::ThreadBackgroundTerminalWriteStdinParams;
+use codex_app_server_protocol::ThreadBackgroundTerminalWriteStdinResponse;
 use codex_app_server_protocol::ThreadBackgroundTerminalsCleanParams;
 use codex_app_server_protocol::ThreadBackgroundTerminalsCleanResponse;
+use codex_app_server_protocol::ThreadBackgroundTerminalsListParams;
+use codex_app_server_protocol::ThreadBackgroundTerminalsListResponse;
 use codex_app_server_protocol::ThreadClosedNotification;
 use codex_app_server_protocol::ThreadCompactStartParams;
 use codex_app_server_protocol::ThreadCompactStartResponse;
@@ -184,8 +193,11 @@ use codex_chatgpt::connectors;
 use codex_cloud_requirements::cloud_requirements_loader;
 use codex_config::types::McpServerTransportConfig;
 use codex_core::CodexThread;
+
 use codex_core::Cursor as RolloutCursor;
+
 use codex_core::ForkSnapshot;
+
 use codex_core::NewThread;
 use codex_core::RolloutRecorder;
 use codex_core::SessionMeta;
@@ -211,6 +223,7 @@ use codex_core::find_archived_thread_path_by_id_str;
 use codex_core::find_thread_name_by_id;
 use codex_core::find_thread_names_by_ids;
 use codex_core::find_thread_path_by_id_str;
+use codex_core::host_exec::HostExecRegistry;
 use codex_core::parse_cursor;
 use codex_core::plugins::MarketplaceError;
 use codex_core::plugins::MarketplacePluginSource;
@@ -287,6 +300,7 @@ use codex_rmcp_client::perform_oauth_login_return_url;
 use codex_rollout::state_db::StateDbHandle;
 use codex_rollout::state_db::get_state_db;
 use codex_rollout::state_db::reconcile_rollout;
+use codex_shell_command::parse_command::shlex_join;
 use codex_state::StateRuntime;
 use codex_state::ThreadMetadata;
 use codex_state::ThreadMetadataBuilder;
@@ -338,6 +352,7 @@ use crate::thread_state::ThreadStateManager;
 const THREAD_LIST_DEFAULT_LIMIT: usize = 25;
 const THREAD_LIST_MAX_LIMIT: usize = 100;
 
+#[derive(Clone)]
 struct ThreadListFilters {
     model_providers: Option<Vec<String>>,
     source_kinds: Option<Vec<ThreadSourceKind>>,
@@ -419,6 +434,9 @@ pub(crate) struct CodexMessageProcessor {
     thread_state_manager: ThreadStateManager,
     thread_watch_manager: ThreadWatchManager,
     command_exec_manager: CommandExecManager,
+    openrouter_beta_threads: OpenRouterBetaThreadManager,
+    #[allow(dead_code)]
+    host_exec_registry: Arc<HostExecRegistry>,
     pending_fuzzy_searches: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
     fuzzy_search_sessions: Arc<Mutex<HashMap<String, FuzzyFileSearchSession>>>,
     background_tasks: TaskTracker,
@@ -442,6 +460,7 @@ struct ListenerTaskContext {
     analytics_events_client: AnalyticsEventsClient,
     general_analytics_enabled: bool,
     thread_watch_manager: ThreadWatchManager,
+    openrouter_beta_threads: OpenRouterBetaThreadManager,
     fallback_model_provider: String,
     codex_home: PathBuf,
 }
@@ -523,6 +542,15 @@ impl CodexMessageProcessor {
 
         Ok((thread_id, thread))
     }
+
+    async fn openrouter_beta_thread_id(&self, thread_id: &str) -> Option<ThreadId> {
+        let thread_id = ThreadId::from_string(thread_id).ok()?;
+        self.openrouter_beta_threads
+            .contains(thread_id)
+            .await
+            .then_some(thread_id)
+    }
+
     pub fn new(args: CodexMessageProcessorArgs) -> Self {
         let CodexMessageProcessorArgs {
             auth_manager,
@@ -537,6 +565,9 @@ impl CodexMessageProcessor {
             feedback,
             log_db,
         } = args;
+        let host_exec_registry = Arc::new(HostExecRegistry::default());
+        let openrouter_beta_threads =
+            OpenRouterBetaThreadManager::new(config.codex_home.clone(), host_exec_registry.clone());
         Self {
             auth_manager,
             thread_manager,
@@ -552,6 +583,8 @@ impl CodexMessageProcessor {
             thread_state_manager: ThreadStateManager::new(),
             thread_watch_manager: ThreadWatchManager::new_with_outgoing(outgoing),
             command_exec_manager: CommandExecManager::default(),
+            openrouter_beta_threads,
+            host_exec_registry,
             pending_fuzzy_searches: Arc::new(Mutex::new(HashMap::new())),
             fuzzy_search_sessions: Arc::new(Mutex::new(HashMap::new())),
             background_tasks: TaskTracker::new(),
@@ -757,6 +790,21 @@ impl CodexMessageProcessor {
                     params,
                 )
                 .await;
+            }
+            ClientRequest::ThreadBackgroundTerminalStart { request_id, params } => {
+                self.thread_background_terminal_start(to_connection_request_id(request_id), params)
+                    .await;
+            }
+            ClientRequest::ThreadBackgroundTerminalWriteStdin { request_id, params } => {
+                self.thread_background_terminal_write_stdin(
+                    to_connection_request_id(request_id),
+                    params,
+                )
+                .await;
+            }
+            ClientRequest::ThreadBackgroundTerminalsList { request_id, params } => {
+                self.thread_background_terminals_list(to_connection_request_id(request_id), params)
+                    .await;
             }
             ClientRequest::ThreadRollback { request_id, params } => {
                 self.thread_rollback(to_connection_request_id(request_id), params)
@@ -2100,6 +2148,7 @@ impl CodexMessageProcessor {
             analytics_events_client: self.analytics_events_client.clone(),
             general_analytics_enabled: self.config.features.enabled(Feature::GeneralAnalytics),
             thread_watch_manager: self.thread_watch_manager.clone(),
+            openrouter_beta_threads: self.openrouter_beta_threads.clone(),
             fallback_model_provider: self.config.model_provider_id.clone(),
             codex_home: self.config.codex_home.clone(),
         };
@@ -2266,21 +2315,50 @@ impl CodexMessageProcessor {
         }
 
         let dynamic_tools = dynamic_tools.unwrap_or_default();
-        if openrouter_beta_is_exec_only(&config.model_provider_id) {
-            listener_task_context
-                .outgoing
-                .send_error(
-                    request_id,
-                    JSONRPCErrorError {
-                        code: INVALID_REQUEST_ERROR_CODE,
-                        message: format!(
-                            "OpenRouter beta threads are currently available only through `codex exec` so the request enters the `logos-provider-openrouter` runtime lane. Interactive app-server and TUI thread/start paths are not wired to that beta lane yet for provider `{}`.",
-                            config.model_provider_id
-                        ),
-                        data: None,
-                    },
+        if is_openrouter_provider_id(&config.model_provider_id) {
+            if !dynamic_tools.is_empty() {
+                listener_task_context
+                    .outgoing
+                    .send_error(
+                        request_id,
+                        JSONRPCErrorError {
+                            code: INVALID_REQUEST_ERROR_CODE,
+                            message: "OpenRouter beta app-server path does not support dynamic tool declarations; use the shared runtime-owned tool lane only."
+                                .to_string(),
+                            data: None,
+                        },
+                    )
+                    .await;
+                return;
+            }
+            match listener_task_context
+                .openrouter_beta_threads
+                .start_thread(
+                    config,
+                    request_id.connection_id,
+                    &listener_task_context.thread_state_manager,
                 )
-                .await;
+                .await
+            {
+                Ok(started) => {
+                    listener_task_context
+                        .outgoing
+                        .send_response(request_id, started.response)
+                        .await;
+                    listener_task_context
+                        .outgoing
+                        .send_server_notification(ServerNotification::ThreadStarted(
+                            started.notification,
+                        ))
+                        .await;
+                }
+                Err(error) => {
+                    listener_task_context
+                        .outgoing
+                        .send_error(request_id, error)
+                        .await;
+                }
+            }
             return;
         }
         let core_dynamic_tools = if dynamic_tools.is_empty() {
@@ -2495,6 +2573,30 @@ impl CodexMessageProcessor {
                 return;
             }
         };
+        match self
+            .openrouter_beta_threads
+            .archive_thread(thread_id, &self.thread_state_manager)
+            .await
+        {
+            Ok(true) => {
+                self.outgoing
+                    .send_response(request_id, ThreadArchiveResponse {})
+                    .await;
+                self.outgoing
+                    .send_server_notification(ServerNotification::ThreadArchived(
+                        ThreadArchivedNotification {
+                            thread_id: thread_id.to_string(),
+                        },
+                    ))
+                    .await;
+                return;
+            }
+            Ok(false) => {}
+            Err(error) => {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+        }
 
         let rollout_path =
             match find_thread_path_by_id_str(&self.config.codex_home, &thread_id.to_string()).await
@@ -2543,6 +2645,30 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         params: ThreadIncrementElicitationParams,
     ) {
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&params.thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .increment_elicitation(thread_id)
+                .await
+            {
+                Ok(count) => {
+                    self.outgoing
+                        .send_response(
+                            request_id,
+                            ThreadIncrementElicitationResponse {
+                                count,
+                                paused: count > 0,
+                            },
+                        )
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
+
         let (_, thread) = match self.load_thread(&params.thread_id).await {
             Ok(value) => value,
             Err(error) => {
@@ -2578,6 +2704,30 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         params: ThreadDecrementElicitationParams,
     ) {
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&params.thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .decrement_elicitation(thread_id)
+                .await
+            {
+                Ok(count) => {
+                    self.outgoing
+                        .send_response(
+                            request_id,
+                            ThreadDecrementElicitationResponse {
+                                count,
+                                paused: count > 0,
+                            },
+                        )
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
+
         let (_, thread) = match self.load_thread(&params.thread_id).await {
             Ok(value) => value,
             Err(error) => {
@@ -2629,6 +2779,32 @@ impl CodexMessageProcessor {
             .await;
             return;
         };
+
+        if self.openrouter_beta_threads.contains(thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .set_thread_name(thread_id, name.clone())
+                .await
+            {
+                Ok(thread) => {
+                    self.outgoing
+                        .send_response(request_id, ThreadSetNameResponse {})
+                        .await;
+                    self.outgoing
+                        .send_server_notification(ServerNotification::ThreadNameUpdated(
+                            ThreadNameUpdatedNotification {
+                                thread_id: thread.id,
+                                thread_name: thread.name,
+                            },
+                        ))
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
 
         if let Ok(thread) = self.thread_manager.get_thread(thread_id).await {
             if let Err(err) = self
@@ -2726,6 +2902,24 @@ impl CodexMessageProcessor {
                 "gitInfo must include at least one field".to_string(),
             )
             .await;
+            return;
+        }
+
+        if self.openrouter_beta_threads.contains(thread_uuid).await {
+            match self
+                .openrouter_beta_threads
+                .update_git_info(thread_uuid, sha, branch, origin_url)
+                .await
+            {
+                Ok(thread) => {
+                    self.outgoing
+                        .send_response(request_id, ThreadMetadataUpdateResponse { thread })
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
             return;
         }
 
@@ -3003,6 +3197,29 @@ impl CodexMessageProcessor {
                 return;
             }
         };
+        match self
+            .openrouter_beta_threads
+            .unarchive_thread(thread_id)
+            .await
+        {
+            Ok(Some(thread)) => {
+                let thread_id = thread.id.clone();
+                self.outgoing
+                    .send_response(request_id, ThreadUnarchiveResponse { thread })
+                    .await;
+                self.outgoing
+                    .send_server_notification(ServerNotification::ThreadUnarchived(
+                        ThreadUnarchivedNotification { thread_id },
+                    ))
+                    .await;
+                return;
+            }
+            Ok(None) => {}
+            Err(error) => {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+        }
 
         let archived_path = match find_archived_thread_path_by_id_str(
             &self.config.codex_home,
@@ -3189,6 +3406,15 @@ impl CodexMessageProcessor {
                 .await;
             return;
         }
+        if self.openrouter_beta_thread_id(&thread_id).await.is_some() {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("rollback"),
+                )
+                .await;
+            return;
+        }
 
         let (thread_id, thread) = match self.load_thread(&thread_id).await {
             Ok(v) => v,
@@ -3245,6 +3471,15 @@ impl CodexMessageProcessor {
         params: ThreadCompactStartParams,
     ) {
         let ThreadCompactStartParams { thread_id } = params;
+        if self.openrouter_beta_thread_id(&thread_id).await.is_some() {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("compact"),
+                )
+                .await;
+            return;
+        }
 
         let (_, thread) = match self.load_thread(&thread_id).await {
             Ok(v) => v,
@@ -3276,6 +3511,17 @@ impl CodexMessageProcessor {
         params: ThreadBackgroundTerminalsCleanParams,
     ) {
         let ThreadBackgroundTerminalsCleanParams { thread_id } = params;
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .background_terminals_clean(thread_id)
+                .await
+            {
+                Ok(response) => self.outgoing.send_response(request_id, response).await,
+                Err(error) => self.outgoing.send_error(request_id, error).await,
+            }
+            return;
+        }
 
         let (_, thread) = match self.load_thread(&thread_id).await {
             Ok(v) => v,
@@ -3304,6 +3550,189 @@ impl CodexMessageProcessor {
         }
     }
 
+    async fn thread_background_terminal_start(
+        &self,
+        request_id: ConnectionRequestId,
+        params: ThreadBackgroundTerminalStartParams,
+    ) {
+        let ThreadBackgroundTerminalStartParams { thread_id, command } = params;
+        let command = command.trim().to_string();
+        if command.is_empty() {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    JSONRPCErrorError {
+                        code: INVALID_REQUEST_ERROR_CODE,
+                        message: "command must not be empty".to_string(),
+                        data: None,
+                    },
+                )
+                .await;
+            return;
+        }
+
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .background_terminal_start(
+                    thread_id,
+                    command,
+                    self.outgoing.clone(),
+                    self.thread_state_manager.clone(),
+                )
+                .await
+            {
+                Ok(response) => self.outgoing.send_response(request_id, response).await,
+                Err(error) => self.outgoing.send_error(request_id, error).await,
+            }
+            return;
+        }
+
+        self.outgoing
+            .send_error(
+                request_id,
+                JSONRPCErrorError {
+                    code: INVALID_REQUEST_ERROR_CODE,
+                    message: "background terminal start is not supported for this thread type"
+                        .to_string(),
+                    data: None,
+                },
+            )
+            .await;
+    }
+
+    async fn thread_background_terminal_write_stdin(
+        &self,
+        request_id: ConnectionRequestId,
+        params: ThreadBackgroundTerminalWriteStdinParams,
+    ) {
+        let ThreadBackgroundTerminalWriteStdinParams {
+            thread_id,
+            call_id,
+            data_base64,
+            close_stdin: _close_stdin,
+        } = params;
+
+        let thread_id = match self.openrouter_beta_thread_id(&thread_id).await {
+            Some(id) => id,
+            None => {
+                self.outgoing
+                    .send_error(
+                        request_id,
+                        JSONRPCErrorError {
+                            code: INVALID_REQUEST_ERROR_CODE,
+                            message: "background terminal writeStdin is not supported for this thread type".to_string(),
+                            data: None,
+                        },
+                    )
+                    .await;
+                return;
+            }
+        };
+
+        let data = match data_base64 {
+            Some(ref b64) => base64::engine::general_purpose::STANDARD
+                .decode(b64)
+                .unwrap_or_default(),
+            None => Vec::new(),
+        };
+
+        let stdin_text = String::from_utf8_lossy(&data).to_string();
+
+        if let Err(err) = self
+            .host_exec_registry
+            .write_stdin(thread_id, &call_id, data)
+            .await
+        {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    JSONRPCErrorError {
+                        code: INTERNAL_ERROR_CODE,
+                        message: format!("failed to write stdin: {err}"),
+                        data: None,
+                    },
+                )
+                .await;
+            return;
+        }
+
+        let connection_ids = self
+            .thread_state_manager
+            .subscribed_connection_ids(thread_id)
+            .await;
+        if !connection_ids.is_empty() {
+            let notification =
+                ServerNotification::TerminalInteraction(TerminalInteractionNotification {
+                    thread_id: thread_id.to_string(),
+                    turn_id: String::new(),
+                    item_id: call_id.clone(),
+                    process_id: String::new(),
+                    stdin: stdin_text,
+                });
+            self.outgoing
+                .send_server_notification_to_connections(&connection_ids, notification)
+                .await;
+        }
+
+        self.outgoing
+            .send_response(request_id, ThreadBackgroundTerminalWriteStdinResponse {})
+            .await;
+    }
+
+    async fn thread_background_terminals_list(
+        &self,
+        request_id: ConnectionRequestId,
+        params: ThreadBackgroundTerminalsListParams,
+    ) {
+        let ThreadBackgroundTerminalsListParams { thread_id } = params;
+
+        let thread_id = match self.openrouter_beta_thread_id(&thread_id).await {
+            Some(id) => id,
+            None => {
+                self.outgoing
+                    .send_error(
+                        request_id,
+                        JSONRPCErrorError {
+                            code: INVALID_REQUEST_ERROR_CODE,
+                            message:
+                                "background terminals list is not supported for this thread type"
+                                    .to_string(),
+                            data: None,
+                        },
+                    )
+                    .await;
+                return;
+            }
+        };
+
+        let processes = self.host_exec_registry.thread_processes(thread_id).await;
+        let process_infos = processes
+            .into_iter()
+            .filter(|process| process.is_interactive())
+            .filter_map(|process| {
+                let process_id = process.process_id?;
+                Some(codex_app_server_protocol::BackgroundTerminalInfo {
+                    call_id: process.call_id,
+                    process_id,
+                    command: shlex_join(&process.command),
+                    cwd: process.cwd.to_string_lossy().to_string(),
+                    started_at: process.started_at,
+                    interactive: true,
+                })
+            })
+            .collect();
+
+        self.outgoing
+            .send_response(
+                request_id,
+                ThreadBackgroundTerminalsListResponse {
+                    processes: process_infos,
+                },
+            )
+            .await;
+    }
+
     async fn thread_shell_command(
         &self,
         request_id: ConnectionRequestId,
@@ -3322,6 +3751,23 @@ impl CodexMessageProcessor {
                     },
                 )
                 .await;
+            return;
+        }
+
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&thread_id).await {
+            match self
+                .openrouter_beta_threads
+                .shell_command(
+                    thread_id,
+                    command,
+                    self.outgoing.clone(),
+                    self.thread_state_manager.clone(),
+                )
+                .await
+            {
+                Ok(response) => self.outgoing.send_response(request_id, response).await,
+                Err(error) => self.outgoing.send_error(request_id, error).await,
+            }
             return;
         }
 
@@ -3372,23 +3818,106 @@ impl CodexMessageProcessor {
             .map(|value| value as usize)
             .unwrap_or(THREAD_LIST_DEFAULT_LIMIT)
             .clamp(1, THREAD_LIST_MAX_LIMIT);
+        let filters = ThreadListFilters {
+            model_providers,
+            source_kinds,
+            archived: archived.unwrap_or(false),
+            cwd: cwd.map(PathBuf::from),
+            search_term,
+        };
         let core_sort_key = match sort_key.unwrap_or(ThreadSortKey::CreatedAt) {
             ThreadSortKey::CreatedAt => CoreThreadSortKey::CreatedAt,
             ThreadSortKey::UpdatedAt => CoreThreadSortKey::UpdatedAt,
         };
-        let (summaries, next_cursor) = match self
-            .list_threads_common(
-                requested_page_size,
-                cursor,
-                core_sort_key,
-                ThreadListFilters {
-                    model_providers,
-                    source_kinds,
-                    archived: archived.unwrap_or(false),
-                    cwd: cwd.map(PathBuf::from),
-                    search_term,
+        let openrouter_threads = if filters.archived {
+            match self.openrouter_beta_threads.list_archived_threads().await {
+                Ok(threads) => threads,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            }
+        } else {
+            match self.openrouter_beta_threads.list_threads().await {
+                Ok(threads) => threads,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            }
+        };
+        if !openrouter_threads.is_empty() {
+            let start = match cursor {
+                Some(cursor) => match cursor.parse::<usize>() {
+                    Ok(value) => value,
+                    Err(_) => {
+                        self.send_invalid_request_error(
+                            request_id,
+                            format!(
+                                "invalid cursor: {cursor}; OpenRouter beta thread/list pagination currently uses numeric offsets"
+                            ),
+                        )
+                        .await;
+                        return;
+                    }
                 },
-            )
+                None => 0,
+            };
+            let summaries = match self
+                .list_all_threads_common(
+                    core_sort_key,
+                    ThreadListFilters {
+                        model_providers: filters.model_providers.clone(),
+                        source_kinds: filters.source_kinds.clone(),
+                        archived: filters.archived,
+                        cwd: filters.cwd.clone(),
+                        search_term: filters.search_term.clone(),
+                    },
+                )
+                .await
+            {
+                Ok(summaries) => summaries,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            };
+            let mut threads = summaries
+                .into_iter()
+                .map(summary_to_thread)
+                .collect::<Vec<_>>();
+            threads.extend(
+                openrouter_threads
+                    .into_iter()
+                    .filter(|thread| openrouter_thread_matches_filters(thread, &filters)),
+            );
+            sort_threads_for_list(&mut threads, core_sort_key);
+            let total = threads.len();
+            if start > total {
+                self.send_invalid_request_error(
+                    request_id,
+                    format!("cursor {start} exceeds total threads {total}"),
+                )
+                .await;
+                return;
+            }
+            let end = start.saturating_add(requested_page_size).min(total);
+            let page = threads[start..end].to_vec();
+            let next_cursor = (end < total).then(|| end.to_string());
+            self.outgoing
+                .send_response(
+                    request_id,
+                    ThreadListResponse {
+                        data: page,
+                        next_cursor,
+                    },
+                )
+                .await;
+            return;
+        }
+
+        let (summaries, next_cursor) = match self
+            .list_threads_common(requested_page_size, cursor, core_sort_key, filters)
             .await
         {
             Ok(r) => r,
@@ -3450,6 +3979,7 @@ impl CodexMessageProcessor {
             .into_iter()
             .map(|thread_id| thread_id.to_string())
             .collect::<Vec<_>>();
+        data.extend(self.openrouter_beta_threads.loaded_thread_ids().await);
 
         if data.is_empty() {
             let response = ThreadLoadedListResponse {
@@ -3510,6 +4040,32 @@ impl CodexMessageProcessor {
                 return;
             }
         };
+
+        if let Some(thread) = self
+            .openrouter_beta_threads
+            .read_thread(thread_uuid, include_turns)
+            .await
+        {
+            let response = ThreadReadResponse { thread };
+            self.outgoing.send_response(request_id, response).await;
+            return;
+        }
+        match self
+            .openrouter_beta_threads
+            .read_persisted_thread(thread_uuid, include_turns)
+            .await
+        {
+            Ok(Some(thread)) => {
+                let response = ThreadReadResponse { thread };
+                self.outgoing.send_response(request_id, response).await;
+                return;
+            }
+            Ok(None) => {}
+            Err(error) => {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+        }
 
         let loaded_thread = self.thread_manager.get_thread(thread_uuid).await.ok();
         let loaded_thread_state_db = loaded_thread.as_ref().and_then(|thread| thread.state_db());
@@ -3703,6 +4259,102 @@ impl CodexMessageProcessor {
     }
 
     async fn thread_resume(&mut self, request_id: ConnectionRequestId, params: ThreadResumeParams) {
+        if let Ok(thread_id) = ThreadId::from_string(&params.thread_id)
+            && self.openrouter_beta_threads.is_loaded(thread_id).await
+        {
+            if let Err(error) =
+                crate::openrouter_beta_threads::validate_openrouter_resume_params(&params)
+            {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            let result = self
+                .openrouter_beta_threads
+                .resume_thread(
+                    thread_id,
+                    request_id.connection_id,
+                    &self.thread_state_manager,
+                )
+                .await;
+            match result {
+                Ok(response) => {
+                    self.outgoing.send_response(request_id, response).await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
+
+        if let Ok(thread_id) = ThreadId::from_string(&params.thread_id)
+            && self
+                .openrouter_beta_threads
+                .has_persisted_active_thread(thread_id)
+                .await
+                .unwrap_or(false)
+        {
+            if let Err(error) =
+                crate::openrouter_beta_threads::validate_openrouter_resume_params(&params)
+            {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            let config = match self.load_latest_config(None).await {
+                Ok(config) => config,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            };
+            match self
+                .openrouter_beta_threads
+                .resume_persisted_thread(
+                    thread_id,
+                    config,
+                    request_id.connection_id,
+                    &self.thread_state_manager,
+                )
+                .await
+            {
+                Ok(Some(response)) => {
+                    self.outgoing.send_response(request_id, response).await;
+                }
+                Ok(None) => {
+                    self.outgoing
+                        .send_error(
+                            request_id,
+                            openrouter_thread_operation_unsupported("resume on unknown thread"),
+                        )
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
+
+        if params
+            .model_provider
+            .as_deref()
+            .is_some_and(is_openrouter_provider_id)
+        {
+            if let Err(error) =
+                crate::openrouter_beta_threads::validate_openrouter_resume_params(&params)
+            {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("resume on unknown thread"),
+                )
+                .await;
+            return;
+        }
+
         if let Ok(thread_id) = ThreadId::from_string(&params.thread_id)
             && self
                 .pending_thread_unloads
@@ -4241,6 +4893,63 @@ impl CodexMessageProcessor {
     }
 
     async fn thread_fork(&mut self, request_id: ConnectionRequestId, params: ThreadForkParams) {
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&params.thread_id).await {
+            if let Err(error) =
+                crate::openrouter_beta_threads::validate_openrouter_fork_params(&params)
+            {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            let config = match self.load_latest_config(None).await {
+                Ok(config) => config,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            };
+            let result = self
+                .openrouter_beta_threads
+                .fork_thread(
+                    thread_id,
+                    config,
+                    request_id.connection_id,
+                    &self.thread_state_manager,
+                )
+                .await;
+            match result {
+                Ok((response, notification)) => {
+                    self.outgoing.send_response(request_id, response).await;
+                    self.outgoing
+                        .send_server_notification(ServerNotification::ThreadStarted(notification))
+                        .await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
+
+        if params
+            .model_provider
+            .as_deref()
+            .is_some_and(is_openrouter_provider_id)
+        {
+            if let Err(error) =
+                crate::openrouter_beta_threads::validate_openrouter_fork_params(&params)
+            {
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("fork on unknown thread"),
+                )
+                .await;
+            return;
+        }
+
         let ThreadForkParams {
             thread_id,
             path,
@@ -4741,6 +5450,31 @@ impl CodexMessageProcessor {
         }
 
         Ok((items, next_cursor))
+    }
+
+    async fn list_all_threads_common(
+        &self,
+        sort_key: CoreThreadSortKey,
+        filters: ThreadListFilters,
+    ) -> Result<Vec<ConversationSummary>, JSONRPCErrorError> {
+        let mut items = Vec::new();
+        let mut cursor = None;
+        loop {
+            let (mut page, next_cursor) = self
+                .list_threads_common(
+                    THREAD_LIST_MAX_LIMIT,
+                    cursor.clone(),
+                    sort_key,
+                    filters.clone(),
+                )
+                .await?;
+            items.append(&mut page);
+            if next_cursor.is_none() {
+                break;
+            }
+            cursor = next_cursor;
+        }
+        Ok(items)
     }
 
     async fn list_models(
@@ -5327,6 +6061,22 @@ impl CodexMessageProcessor {
                 return;
             }
         };
+
+        if self.openrouter_beta_threads.contains(thread_id).await {
+            let was_subscribed = self
+                .thread_state_manager
+                .unsubscribe_connection_from_thread(thread_id, request_id.connection_id)
+                .await;
+            let status = if was_subscribed {
+                ThreadUnsubscribeStatus::Unsubscribed
+            } else {
+                ThreadUnsubscribeStatus::NotSubscribed
+            };
+            self.outgoing
+                .send_response(request_id, ThreadUnsubscribeResponse { status })
+                .await;
+            return;
+        }
 
         let Ok(thread) = self.thread_manager.get_thread(thread_id).await else {
             // Reconcile stale app-server bookkeeping when the thread has already been
@@ -6431,6 +7181,49 @@ impl CodexMessageProcessor {
             self.outgoing.send_error(request_id, error).await;
             return;
         }
+
+        let thread_id = match ThreadId::from_string(&params.thread_id) {
+            Ok(thread_id) => thread_id,
+            Err(err) => {
+                self.outgoing
+                    .send_error(
+                        request_id,
+                        JSONRPCErrorError {
+                            code: INVALID_REQUEST_ERROR_CODE,
+                            message: format!("invalid thread id: {err}"),
+                            data: None,
+                        },
+                    )
+                    .await;
+                return;
+            }
+        };
+        if self.openrouter_beta_threads.contains(thread_id).await {
+            let thread_id_str = thread_id.to_string();
+            match self
+                .openrouter_beta_threads
+                .start_turn(
+                    thread_id,
+                    params,
+                    Arc::clone(&self.outgoing),
+                    self.thread_state_manager.clone(),
+                )
+                .await
+            {
+                Ok(response) => {
+                    self.outgoing
+                        .record_request_turn_id(&request_id, &response.turn.id)
+                        .await;
+                    self.outgoing.send_response(request_id, response).await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            tracing::debug!(thread_id = %thread_id_str, "handled OpenRouter beta turn/start via shared lane");
+            return;
+        }
+
         let (_, thread) = match self.load_thread(&params.thread_id).await {
             Ok(v) => v,
             Err(error) => {
@@ -6548,6 +7341,19 @@ impl CodexMessageProcessor {
     }
 
     async fn turn_steer(&self, request_id: ConnectionRequestId, params: TurnSteerParams) {
+        if self
+            .openrouter_beta_thread_id(&params.thread_id)
+            .await
+            .is_some()
+        {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("turn steering"),
+                )
+                .await;
+            return;
+        }
         let (_, thread) = match self.load_thread(&params.thread_id).await {
             Ok(v) => v,
             Err(error) => {
@@ -6649,6 +7455,15 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         thread_id: &str,
     ) -> Option<(ThreadId, Arc<CodexThread>)> {
+        if self.openrouter_beta_thread_id(thread_id).await.is_some() {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("realtime conversation"),
+                )
+                .await;
+            return None;
+        }
         let (thread_id, thread) = match self.load_thread(thread_id).await {
             Ok(v) => v,
             Err(error) => {
@@ -7021,6 +7836,36 @@ impl CodexMessageProcessor {
     }
 
     async fn review_start(&mut self, request_id: ConnectionRequestId, params: ReviewStartParams) {
+        if let Some(thread_id) = self.openrouter_beta_thread_id(&params.thread_id).await {
+            let config = match self.load_latest_config(None).await {
+                Ok(config) => config,
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                    return;
+                }
+            };
+            let result = self
+                .openrouter_beta_threads
+                .start_review(
+                    thread_id,
+                    config,
+                    params.target,
+                    params.delivery,
+                    request_id.connection_id,
+                    Arc::clone(&self.outgoing),
+                    self.thread_state_manager.clone(),
+                )
+                .await;
+            match result {
+                Ok(response) => {
+                    self.outgoing.send_response(request_id, response).await;
+                }
+                Err(error) => {
+                    self.outgoing.send_error(request_id, error).await;
+                }
+            }
+            return;
+        }
         let ReviewStartParams {
             thread_id,
             target,
@@ -7081,6 +7926,15 @@ impl CodexMessageProcessor {
         params: TurnInterruptParams,
     ) {
         let TurnInterruptParams { thread_id, turn_id } = params;
+        if self.openrouter_beta_thread_id(&thread_id).await.is_some() {
+            self.outgoing
+                .send_error(
+                    request_id,
+                    openrouter_thread_operation_unsupported("turn interrupt"),
+                )
+                .await;
+            return;
+        }
         self.outgoing
             .record_request_turn_id(&request_id, &turn_id)
             .await;
@@ -7125,6 +7979,7 @@ impl CodexMessageProcessor {
                 analytics_events_client: self.analytics_events_client.clone(),
                 general_analytics_enabled: self.config.features.enabled(Feature::GeneralAnalytics),
                 thread_watch_manager: self.thread_watch_manager.clone(),
+                openrouter_beta_threads: self.openrouter_beta_threads.clone(),
                 fallback_model_provider: self.config.model_provider_id.clone(),
                 codex_home: self.config.codex_home.clone(),
             },
@@ -7214,6 +8069,7 @@ impl CodexMessageProcessor {
                 analytics_events_client: self.analytics_events_client.clone(),
                 general_analytics_enabled: self.config.features.enabled(Feature::GeneralAnalytics),
                 thread_watch_manager: self.thread_watch_manager.clone(),
+                openrouter_beta_threads: self.openrouter_beta_threads.clone(),
                 fallback_model_provider: self.config.model_provider_id.clone(),
                 codex_home: self.config.codex_home.clone(),
             },
@@ -7247,6 +8103,7 @@ impl CodexMessageProcessor {
             analytics_events_client: _,
             general_analytics_enabled: _,
             thread_watch_manager,
+            openrouter_beta_threads: _,
             fallback_model_provider,
             codex_home,
         } = listener_task_context;
@@ -8817,8 +9674,75 @@ pub(crate) fn summary_to_thread(summary: ConversationSummary) -> Thread {
     }
 }
 
-fn openrouter_beta_is_exec_only(provider_id: &str) -> bool {
-    is_openrouter_provider_id(provider_id)
+fn openrouter_thread_matches_filters(thread: &Thread, filters: &ThreadListFilters) -> bool {
+    if let Some(model_providers) = filters.model_providers.as_ref()
+        && !model_providers.is_empty()
+        && !model_providers
+            .iter()
+            .any(|provider| provider == &thread.model_provider)
+    {
+        return false;
+    }
+    if let Some(source_kinds) = filters.source_kinds.as_ref()
+        && !source_kinds
+            .iter()
+            .any(|kind| *kind == thread_source_kind(&thread.source))
+    {
+        return false;
+    }
+    if let Some(cwd) = filters.cwd.as_ref()
+        && &thread.cwd != cwd
+    {
+        return false;
+    }
+    if let Some(search_term) = filters.search_term.as_ref() {
+        let needle = search_term.to_lowercase();
+        let name_matches = thread
+            .name
+            .as_ref()
+            .is_some_and(|name| name.to_lowercase().contains(&needle));
+        let preview_matches = thread.preview.to_lowercase().contains(&needle);
+        let id_matches = thread.id.to_lowercase().contains(&needle);
+        if !name_matches && !preview_matches && !id_matches {
+            return false;
+        }
+    }
+    true
+}
+
+fn thread_source_kind(source: &codex_app_server_protocol::SessionSource) -> ThreadSourceKind {
+    match source {
+        codex_app_server_protocol::SessionSource::Cli => ThreadSourceKind::Cli,
+        codex_app_server_protocol::SessionSource::VsCode => ThreadSourceKind::VsCode,
+        codex_app_server_protocol::SessionSource::Exec => ThreadSourceKind::Exec,
+        codex_app_server_protocol::SessionSource::AppServer
+        | codex_app_server_protocol::SessionSource::Custom(_) => ThreadSourceKind::AppServer,
+        codex_app_server_protocol::SessionSource::SubAgent(subsource) => match subsource {
+            codex_protocol::protocol::SubAgentSource::Review => ThreadSourceKind::SubAgentReview,
+            codex_protocol::protocol::SubAgentSource::Compact => ThreadSourceKind::SubAgentCompact,
+            codex_protocol::protocol::SubAgentSource::ThreadSpawn { .. } => {
+                ThreadSourceKind::SubAgentThreadSpawn
+            }
+            codex_protocol::protocol::SubAgentSource::Other(_)
+            | codex_protocol::protocol::SubAgentSource::MemoryConsolidation => {
+                ThreadSourceKind::SubAgentOther
+            }
+        },
+        codex_app_server_protocol::SessionSource::Unknown => ThreadSourceKind::Unknown,
+    }
+}
+
+fn sort_threads_for_list(threads: &mut [Thread], sort_key: CoreThreadSortKey) {
+    threads.sort_by(|left, right| match sort_key {
+        CoreThreadSortKey::CreatedAt => right
+            .created_at
+            .cmp(&left.created_at)
+            .then_with(|| right.id.cmp(&left.id)),
+        CoreThreadSortKey::UpdatedAt => right
+            .updated_at
+            .cmp(&left.updated_at)
+            .then_with(|| right.id.cmp(&left.id)),
+    });
 }
 
 #[cfg(test)]
@@ -8859,13 +9783,6 @@ mod tests {
             defer_loading: false,
         }];
         validate_dynamic_tools(&tools).expect("valid schema");
-    }
-
-    #[test]
-    fn openrouter_beta_provider_ids_are_marked_exec_only_for_app_server() {
-        assert!(openrouter_beta_is_exec_only("openrouter"));
-        assert!(openrouter_beta_is_exec_only("openrouter-tuned"));
-        assert!(!openrouter_beta_is_exec_only("openai"));
     }
 
     #[test]

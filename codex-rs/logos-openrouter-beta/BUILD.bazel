@@ -1,0 +1,7 @@
+load("//:defs.bzl", "codex_rust_crate")
+
+codex_rust_crate(
+    name = "logos-openrouter-beta",
+    crate_name = "logos_openrouter_beta",
+    test_tags = ["no-sandbox"],
+)

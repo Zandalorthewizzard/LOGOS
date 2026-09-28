@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-11",
+  "generated_at": "2026-04-18",
   "scope": "logos-docs",
   "docs": [
     {
@@ -35,6 +35,38 @@
       "source_of_truth": "process"
     },
     {
+      "id": "logos-guide-op-orchestrated-agent-loop",
+      "path": "02-guides/operations/2026-04-14-orchestrated-agent-loop.md",
+      "type": "guide",
+      "focus": ["external agent loop", "tasking", "review"],
+      "status": "active",
+      "source_of_truth": "process"
+    },
+    {
+      "id": "logos-guide-op-glm-5-1-agent-profile",
+      "path": "02-guides/operations/2026-04-14-glm-5.1-agent-profile.md",
+      "type": "guide",
+      "focus": ["glm 5.1", "execution agent", "report template"],
+      "status": "active",
+      "source_of_truth": "process"
+    },
+    {
+      "id": "logos-guide-op-slice-risk-register-and-boundary-discipline",
+      "path": "02-guides/operations/2026-04-18-slice-risk-register-and-boundary-discipline.md",
+      "type": "guide",
+      "focus": ["risk register", "boundary discipline", "specs", "tasks", "implementation"],
+      "status": "active",
+      "source_of_truth": "process"
+    },
+    {
+      "id": "logos-guide-op-research-transfer-and-dual-consensus-validation",
+      "path": "02-guides/operations/2026-04-16-research-transfer-and-dual-consensus-validation.md",
+      "type": "guide",
+      "focus": ["research transfer", "dual consensus", "decision surfaces", "validation"],
+      "status": "active",
+      "source_of_truth": "process"
+    },
+    {
       "id": "logos-phase-hub",
       "path": "07-logos-phase/README.md",
       "type": "hub",
@@ -47,6 +79,14 @@
       "path": "07-logos-phase/analysis/2026-03-30-codex-model-agnostic-analysis.md",
       "type": "analysis",
       "focus": ["codex architecture", "provider constraints"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-implemented-items-parity-scope-analysis",
+      "path": "07-logos-phase/analysis/2026-04-18-implemented-items-parity-scope-analysis.md",
+      "type": "analysis",
+      "focus": ["implemented items", "parity remainder", "scope analysis"],
       "status": "active",
       "source_of_truth": "working-doc"
     },
@@ -215,6 +255,334 @@
       "path": "07-logos-phase/architecture/2026-04-11-logos-structured-output-capability-discussion.md",
       "type": "discussion",
       "focus": ["structured output", "capability truth", "phase 5 follow-up"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-code-main-fork-phase-6-triage-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-code-main-fork-phase-6-triage-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 6 triage", "code-main fork", "coexistence", "provider foundation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-philosophy-and-invariants",
+      "path": "07-logos-phase/architecture/2026-04-11-logos-philosophy-and-invariants.md",
+      "type": "spec",
+      "focus": ["project philosophy", "invariants", "parity", "core seams"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-ownership-and-provider-native-backend-model-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-logos-session-state-ownership-and-provider-native-backend-model-discussion.md",
+      "type": "discussion",
+      "focus": ["session/state ownership", "provider-native backends", "phase 6", "architecture"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-layer-extraction-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-logos-session-state-layer-extraction-discussion.md",
+      "type": "discussion",
+      "focus": ["session-state extraction", "ownership boundary", "phase 6", "architecture"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-01-thread-manager-draft-implementation-discussion",
+      "path": "07-logos-phase/architecture/2026-04-16-item-01-thread-manager-draft-implementation-discussion.md",
+      "type": "discussion",
+      "focus": ["thread manager", "session-state", "draft implementation", "research transfer"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-stateless-replay-and-tool-gate-observations",
+      "path": "07-logos-phase/architecture/2026-04-11-openrouter-stateless-replay-and-tool-gate-observations.md",
+      "type": "discussion",
+      "focus": ["openrouter", "replay", "tool gate", "phase 6 risks"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-6-openrouter-beta-hardening-and-release-readiness-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-discussion.md",
+      "type": "discussion",
+      "focus": ["phase 6", "openrouter beta", "release readiness"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-resume-support-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-resume-support-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "resume", "phase 6", "app-server"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-shell-command-support-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-shell-command-support-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "thread shell command", "host ops"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-05-shell-execution-draft-implementation-discussion",
+      "path": "07-logos-phase/architecture/2026-04-18-item-05-shell-execution-draft-implementation-discussion.md",
+      "type": "discussion",
+      "focus": ["shell execution", "host exec", "shared substrate", "extraction"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-background-terminals-cleanup-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-background-terminals-cleanup-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "background terminals", "cleanup", "host ops"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-sprint-discussion",
+      "path": "07-logos-phase/architecture/2026-04-17-session-state-foundation-sprint-discussion.md",
+      "type": "discussion",
+      "focus": ["session-state", "sprint", "foundation", "navigation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-11-background-terminals-draft-implementation-discussion",
+      "path": "07-logos-phase/architecture/2026-04-16-item-11-background-terminals-draft-implementation-discussion.md",
+      "type": "discussion",
+      "focus": ["background terminals", "host ops", "shared process layer", "extraction"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-sprint-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-sprint-strict-spec.md",
+      "type": "spec",
+      "focus": ["session-state", "sprint", "task order", "foundation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-02-session-persistence-implementation-reference",
+      "path": "07-logos-phase/implementation/2026-04-17-item-02-implementation-reference.md",
+      "type": "implementation-reference",
+      "focus": ["session persistence", "borrow mapping", "goose", "opencode"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-03-fork-resume-implementation-reference",
+      "path": "07-logos-phase/implementation/2026-04-17-item-03-implementation-reference.md",
+      "type": "implementation-reference",
+      "focus": ["fork", "resume", "borrow mapping", "provider-policy-aware continuation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-04-turn-lifecycle-implementation-reference",
+      "path": "07-logos-phase/implementation/2026-04-17-item-04-implementation-reference.md",
+      "type": "implementation-reference",
+      "focus": ["turn lifecycle", "notifications", "borrow mapping", "runner"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-05-shell-execution-implementation-reference",
+      "path": "07-logos-phase/implementation/2026-04-18-item-05-implementation-reference.md",
+      "type": "implementation-reference",
+      "focus": ["shell execution", "local reuse map", "host exec", "guardrails"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-05-shell-execution-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-18-item-05-shell-execution-strict-spec.md",
+      "type": "spec",
+      "focus": ["shell execution", "thread shell command", "host exec", "openrouter parity"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-01-thread-manager-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-task-01-thread-manager-strict-spec.md",
+      "type": "spec",
+      "focus": ["thread manager", "registry", "ephemeral runtime", "session-state"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-02-session-persistence-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-task-02-session-persistence-strict-spec.md",
+      "type": "spec",
+      "focus": ["session persistence", "metadata store", "journal boundary", "migration"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-03-turn-lifecycle-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-task-03-turn-lifecycle-strict-spec.md",
+      "type": "spec",
+      "focus": ["turn lifecycle", "derived notifications", "runner", "event layer"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-04-fork-resume-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-task-04-fork-resume-strict-spec.md",
+      "type": "spec",
+      "focus": ["fork", "resume", "lineage", "provider-policy-aware continuation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-slice-implementation-report-template",
+      "path": "07-logos-phase/implementation/2026-04-17-session-state-foundation-slice-implementation-report-template.md",
+      "type": "template",
+      "focus": ["implementation report", "borrow tracing", "stale code tracking"],
+      "status": "active",
+      "source_of_truth": "canonical"
+    },
+    {
+      "id": "logos-session-state-foundation-task-01-implementation-report",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-task-01-implementation-report.md",
+      "type": "implementation-report",
+      "focus": ["thread manager", "registry", "openrouter beta", "slice closure"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-02-implementation-report",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-task-02-implementation-report.md",
+      "type": "implementation-report",
+      "focus": ["session persistence", "registry metadata", "hybrid boundary", "slice closure"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-checkpoint-a-reassessment",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-checkpoint-a-reassessment.md",
+      "type": "implementation-report",
+      "focus": ["checkpoint a", "registry", "persistence boundary", "sprint reassessment"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-03-implementation-report",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-task-03-implementation-report.md",
+      "type": "implementation-report",
+      "focus": ["turn lifecycle", "derived notifications", "openrouter beta", "slice closure"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-task-04-implementation-report",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-task-04-implementation-report.md",
+      "type": "implementation-report",
+      "focus": ["fork", "resume", "durable state", "openrouter beta"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-state-foundation-post-task-04-reassessment",
+      "path": "07-logos-phase/implementation/2026-04-18-session-state-foundation-post-task-04-reassessment.md",
+      "type": "implementation-report",
+      "focus": ["reassessment", "item 06", "item 07", "item 08", "item 10"],
+      "status": "completed",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-11-background-terminals-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-17-item-11-background-terminals-strict-spec.md",
+      "type": "spec",
+      "focus": ["background terminals", "cleanup", "shared process owner", "tui boundary"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-archive-support-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-archive-support-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "archive", "thread lifecycle"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-unarchive-support-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-unarchive-support-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "unarchive", "thread lifecycle"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-rollback-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-rollback-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "rollback", "thread lifecycle"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-thread-compaction-support-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-thread-compaction-support-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "compaction", "replay", "phase 6 risk"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-turn-interrupt-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-turn-interrupt-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "turn interrupt", "control"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-turn-steering-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-turn-steering-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "turn steering", "control"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-openrouter-realtime-conversation-discussion",
+      "path": "07-logos-phase/architecture/2026-04-14-openrouter-realtime-conversation-discussion.md",
+      "type": "discussion",
+      "focus": ["openrouter", "realtime", "transport", "phase 6 risk"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-local-validation-post-mvp-milestone-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-local-validation-post-mvp-milestone-discussion.md",
+      "type": "discussion",
+      "focus": ["local validation", "lmstudio", "post-mvp milestone"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-glm-zai-post-mvp-milestone-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-glm-zai-post-mvp-milestone-discussion.md",
+      "type": "discussion",
+      "focus": ["glm", "zai", "post-mvp milestone"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-gemini-post-mvp-milestone-discussion",
+      "path": "07-logos-phase/architecture/2026-04-11-gemini-post-mvp-milestone-discussion.md",
+      "type": "discussion",
+      "focus": ["gemini", "post-mvp milestone", "provider expansion"],
       "status": "active",
       "source_of_truth": "working-doc"
     },
@@ -443,6 +811,40 @@
       "source_of_truth": "working-doc"
     },
     {
+      "id": "logos-phase-6-openrouter-beta-hardening-and-release-readiness-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-strict-spec.md",
+      "type": "spec",
+      "focus": [
+        "strict implementation spec",
+        "phase 6",
+        "openrouter beta",
+        "release readiness"
+      ],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-phase-6-session-state-layer-extraction-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-14-phase-6-session-state-layer-extraction-strict-spec.md",
+      "type": "spec",
+      "focus": [
+        "strict implementation spec",
+        "phase 6",
+        "session-state extraction",
+        "openrouter"
+      ],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-01-implementation-reference",
+      "path": "07-logos-phase/implementation/2026-04-16-item-01-implementation-reference.md",
+      "type": "implementation-reference",
+      "focus": ["item 01", "thread manager", "implementation patterns", "goose", "opencode"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
       "id": "logos-codex-base-repository-strategy",
       "path": "07-logos-phase/implementation/2026-04-02-codex-base-repository-strategy.md",
       "type": "spec",
@@ -535,6 +937,38 @@
       "path": "07-logos-phase/research/2026-04-02-opencode-goose-architecture-reference.md",
       "type": "research",
       "focus": ["competitor architecture", "OpenCode", "Goose", "ux parity"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-session-layer-research-transfer-ledger",
+      "path": "07-logos-phase/research/2026-04-16-session-layer-research-transfer-ledger.md",
+      "type": "analysis",
+      "focus": ["session layer", "research transfer", "dual consensus"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-07-archive-metadata-migration-discussion",
+      "path": "07-logos-phase/architecture/2026-04-18-item-07-archive-metadata-migration-discussion.md",
+      "type": "discussion",
+      "focus": ["item 07", "archive", "metadata", "migration", "ownership"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-07-archive-metadata-migration-strict-spec",
+      "path": "07-logos-phase/implementation/2026-04-18-item-07-archive-metadata-migration-strict-spec.md",
+      "type": "spec",
+      "focus": ["item 07", "archive", "metadata", "migration", "implementation"],
+      "status": "active",
+      "source_of_truth": "working-doc"
+    },
+    {
+      "id": "logos-item-07-archive-metadata-migration-implementation-report",
+      "path": "07-logos-phase/implementation/2026-04-18-item-07-archive-metadata-migration-implementation-report.md",
+      "type": "implementation-report",
+      "focus": ["item 07", "archive", "metadata", "migration", "implementation report"],
       "status": "active",
       "source_of_truth": "working-doc"
     },

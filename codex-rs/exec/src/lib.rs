@@ -108,9 +108,9 @@ use uuid::Uuid;
 use crate::cli::Command as ExecCommand;
 use crate::event_processor::CodexStatus;
 use crate::event_processor::EventProcessor;
-use crate::openrouter_beta::openrouter_beta_tuning_note;
 use crate::openrouter_beta::run_openrouter_exec_path;
-use crate::openrouter_beta::uses_openrouter_beta_lane;
+use logos_openrouter_beta::openrouter_beta_tuning_note;
+use logos_openrouter_beta::uses_openrouter_beta_lane;
 
 const DEFAULT_ANALYTICS_ENABLED: bool = true;
 
@@ -522,7 +522,7 @@ async fn run_exec_session(args: ExecRunArgs) -> anyhow::Result<()> {
         && command_supports_no_openrouter_beta_exec(command.as_ref())
     {
         return Err(anyhow::anyhow!(
-            "OpenRouter beta exec path currently supports only new user turns; resume and review remain unavailable on this beta lane"
+            "OpenRouter beta exec path currently supports only new user turns; use the app-server (TUI) path for resume and review"
         ));
     }
 
@@ -591,7 +591,7 @@ async fn run_exec_session(args: ExecRunArgs) -> anyhow::Result<()> {
         } = initial_operation
         else {
             return Err(anyhow::anyhow!(
-                "OpenRouter beta exec path currently supports only new user turns; resume and review remain unavailable on this beta lane"
+                "OpenRouter beta exec path currently supports only new user turns; use the app-server (TUI) path for resume and review"
             ));
         };
         eprintln!("{}", openrouter_beta_tuning_note());

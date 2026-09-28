@@ -301,6 +301,21 @@ client_request_definitions! {
         params: v2::ThreadBackgroundTerminalsCleanParams,
         response: v2::ThreadBackgroundTerminalsCleanResponse,
     },
+    #[experimental("thread/backgroundTerminal/start")]
+    ThreadBackgroundTerminalStart => "thread/backgroundTerminal/start" {
+        params: v2::ThreadBackgroundTerminalStartParams,
+        response: v2::ThreadBackgroundTerminalStartResponse,
+    },
+    #[experimental("thread/backgroundTerminal/writeStdin")]
+    ThreadBackgroundTerminalWriteStdin => "thread/backgroundTerminal/writeStdin" {
+        params: v2::ThreadBackgroundTerminalWriteStdinParams,
+        response: v2::ThreadBackgroundTerminalWriteStdinResponse,
+    },
+    #[experimental("thread/backgroundTerminals/list")]
+    ThreadBackgroundTerminalsList => "thread/backgroundTerminals/list" {
+        params: v2::ThreadBackgroundTerminalsListParams,
+        response: v2::ThreadBackgroundTerminalsListResponse,
+    },
     ThreadRollback => "thread/rollback" {
         params: v2::ThreadRollbackParams,
         response: v2::ThreadRollbackResponse,

@@ -16,6 +16,7 @@ mod fs;
 mod initialize;
 mod mcp_server_elicitation;
 mod model_list;
+mod openrouter_beta;
 mod output_schema;
 mod plan_item;
 mod plugin_install;

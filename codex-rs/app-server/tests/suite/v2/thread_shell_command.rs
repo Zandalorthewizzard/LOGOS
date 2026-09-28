@@ -94,8 +94,8 @@ async fn thread_shell_command_runs_as_standalone_turn_and_persists_history() -> 
     assert_eq!(source, &CommandExecutionSource::UserShell);
     assert_eq!(status, &CommandExecutionStatus::InProgress);
 
-    let delta = wait_for_command_execution_output_delta(&mut mcp, &command_id).await?;
-    assert_eq!(delta.delta, expected_output);
+    let output = wait_for_command_execution_output(&mut mcp, &command_id).await?;
+    assert_eq!(output, expected_output);
 
     let completed = wait_for_command_execution_completed(&mut mcp, Some(&command_id)).await?;
     let ThreadItem::CommandExecution {
@@ -398,10 +398,8 @@ async fn wait_for_command_execution_completed(
     }
 }
 
-async fn wait_for_command_execution_output_delta(
-    mcp: &mut McpProcess,
-    item_id: &str,
-) -> Result<CommandExecutionOutputDeltaNotification> {
+async fn wait_for_command_execution_output(mcp: &mut McpProcess, item_id: &str) -> Result<String> {
+    let mut output = String::new();
     loop {
         let notif = mcp
             .read_stream_until_notification_message("item/commandExecution/outputDelta")
@@ -412,7 +410,10 @@ async fn wait_for_command_execution_output_delta(
                 .ok_or_else(|| anyhow::anyhow!("missing output delta params"))?,
         )?;
         if delta.item_id == item_id {
-            return Ok(delta);
+            output.push_str(&delta.delta);
+            if output.ends_with('\n') {
+                return Ok(output);
+            }
         }
     }
 }

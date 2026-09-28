@@ -75,6 +75,8 @@ mod fuzzy_file_search;
 pub mod in_process;
 mod message_processor;
 mod models;
+mod openrouter_beta_persistence;
+mod openrouter_beta_threads;
 mod outgoing_message;
 mod server_request_error;
 mod thread_state;

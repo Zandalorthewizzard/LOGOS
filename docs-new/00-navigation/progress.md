@@ -96,6 +96,75 @@ outline: []
 6. Closed the phase-5 fix-pass by making structured-output capability truth honest for the current validation slice and by hardening malformed non-`2xx` HTTP fallback into explicit status-based provider errors.
 7. Added a dedicated structured-output capability discussion that explains why the current LOGOS boundary cannot honestly advertise OpenRouter structured-output support yet and where the real feature lane belongs.
 8. Re-aligned documentation state so phase-5 is now treated as closed for the current bounded validation scope after the final capability-truth and malformed-error-hardening pass.
+9. Reframed the roadmap around a narrower `LOGOS 0.1 beta` target: preserved OpenAI, OpenRouter beta hardening, and provider-foundation stabilization instead of broader provider breadth.
+10. Moved local validation out of the MVP scope and recorded it as an explicit post-MVP milestone.
+11. Added dedicated post-MVP milestone discussions for local validation, GLM/Z.AI, and Gemini so future provider expansion is planned without widening the current beta scope.
+12. Updated `AGENTS.md`, the phase hub, and top-level navigation so future agents inherit the new beta-first MVP boundary instead of the older multi-provider MVP target.
+13. Added a canonical phase-6 discussion and strict spec for OpenRouter beta hardening, Codex coexistence, provider-foundation work, and `LOGOS 0.1 beta` release readiness.
+14. Locked phase-6 as an OpenRouter `Agent Beta` gate, making runtime-owned OpenRouter tool support a release requirement instead of a soft stretch goal.
+15. Locked the phase-6 execution order so the OpenRouter tool gate must be proven through one narrow adapter-local roundtrip slice before broader beta hardening widens.
+16. Added a dedicated OpenRouter observation doc that records the stateless replay implications and the five OR-specific risks that must be explicitly walked before the OpenRouter stage can close.
+17. Added a dedicated phase-6 triage discussion for the `code-main` fork research, explicitly separating what should be taken now for beta hardening, what is post-beta, and what should stay rejected because it conflicts with LOGOS coexistence or runtime-simplicity goals.
+18. Added a canonical `LOGOS Philosophy And Invariants` doc that gathers the durable project stance around preserved OpenAI parity, narrow Codex seams, honest provider semantics, and runtime-owned authority instead of leaving those ideas scattered across roadmap and phase docs.
+19. Added a lightweight `META-CONSENSUS` block to `AGENTS.md` that points at the philosophy doc, gives a compressed current strategic stance, and keeps a placeholder `Before the current consensus` section for future larger strategic shifts.
+
+## 2026-04-14
+
+1. Added a local operations guide that captures the default orchestrated external-agent loop for LOGOS implementation work, including fixed task, report, and review templates.
+2. Added a project-local `GLM 5.1` execution-agent profile that records the model's strengths, weaknesses, optimal slice size, acceptance posture, and mandatory report format.
+3. Wired both docs into `AGENTS.md` so future orchestration can switch directly into the known `GLM 5.1` workflow instead of rebuilding the model interaction style from chat memory.
+4. Synced top-level navigation artifacts so the new execution-agent workflow docs are part of the active LOGOS documentation system.
+5. Added dedicated OpenRouter phase-6 control-surface discussions for resume, shell-command, background-terminal cleanup, archive, unarchive, rollback, compaction, turn interrupt, turn steering, and realtime so remaining OR parity decisions are tracked as separate decision surfaces instead of one blended TODO list.
+6. Added an applied architecture discussion that locks LOGOS-owned session/state semantics above provider wires, keeps adapters thin, and treats provider-native continuation or compaction as provider-first backends with honest fallback into LOGOS-managed behavior only when semantics remain valid.
+7. Added a dedicated session-state extraction discussion and strict spec that define the first bounded move of clear shared non-canonical thread lifecycle and host-operation mechanics out of `openrouter_beta_threads.rs` into a future shared LOGOS session-state layer, including what moves now, what moves later, and what remains provider-policy-sensitive for now.
+8. Added a research-transfer and dual-consensus workflow doc that defines how large external research packages are decomposed by index, mapped into decision surfaces, reviewed with assistant verdicts, and only promoted into specs after a second explicit user verdict produces a validated consensus state.
+
+## 2026-04-16
+
+1. Added a research-specific transfer ledger for the `research/session layer/` package, mapping each researched mechanic into current LOGOS decision surfaces with assistant verdicts instead of relying on chat memory.
+2. Recorded the package-integrity mismatch where the source index claims `16` tasks but only `15` concrete `RA-*` mechanic documents are present, so future sweeps do not silently overstate coverage.
+3. Explicitly identified missing dedicated decision surfaces still needed before later spec writing: session persistence, turn lifecycle/notifications, review orchestration, multi-provider handoff, and streaming optimization.
+4. Validated `Item 01: Thread Manager` to dual consensus as `ACCEPT`, explicitly separating the accepted storage-backed registry pattern from neighboring items such as process ownership and notification derivation.
+5. Added a code-aware draft implementation discussion for `Item 01` that grounds the accepted pattern in current OpenRouter/Codex evidence and defines the practical target as a durable non-canonical registry plus ephemeral runtime for stateless-provider lanes.
+6. Added an `Item 01` implementation reference doc that maps Goose and OpenCode production patterns onto the staged LOGOS thread-manager draft so future strict-spec work can compare imported mechanisms against concrete rollout code.
+7. Validated `Item 02: session persistence` to dual consensus as `ADAPT`, accepting SQLite-backed metadata, WAL, migrations, partial updates, and legacy import while keeping the phase-4 journal as canonical runtime truth.
+8. Validated `Item 03: fork / resume orchestration` to dual consensus as `ADAPT`, locking shared LOGOS ownership for fork/resume while preserving provider-native continuation as an optional backend and replay-first fallback as the non-canonical path.
+9. Validated `Item 04: turn lifecycle and notification dispatch` to dual consensus as `ACCEPT`, locking authoritative lifecycle state plus derived notifications as the correct direction for the shared LOGOS event layer.
+10. Validated `Item 05: shell execution` to dual consensus as `ADAPT`, locking shell command execution as a shared local LOGOS runtime mechanic while explicitly recording that the current mature Codex implementation is still canonically coupled to `Session`, `TurnContext`, and `SessionServices` and therefore needs extraction or wrapping before stateless-provider lanes can reuse it honestly.
+11. Deferred `Item 06: review orchestration`, explicitly recording that review is a workflow layered above fork/resume, lifecycle, prompt synthesis, and structured output parsing rather than a standalone substrate item to settle before those lower primitives are in place.
+12. Deferred `Item 07: archive/unarchive + metadata`, explicitly recording that `codex-state` already provides the main target substrate and that the real remaining work is wiring and migration after `Item 01` and `Item 02` settle the shared registry and persistence boundary.
+13. Extended the research-transfer workflow with a rare `CUSTOM` verdict family for items where the main substrate already exists locally in preserved Codex/LOGOS and the real work is extraction or ownership correction rather than import or reinterpretation.
+14. Validated `Item 11: background terminals` to dual consensus as `CUSTOM`, locking the correct target as extraction of the common local process-lifecycle substrate out of the canonical path into a shared LOGOS layer instead of keeping OpenRouter-owned bookkeeping.
+
+## 2026-04-17
+
+1. Tightened the `Item 11: background terminals` draft implementation discussion with an explicit extraction-completion rule, making deletion of OpenRouter-owned cleanup bookkeeping a hard closure condition instead of implicit cleanup.
+2. Added a dedicated `Item 11` strict spec that locks shared LOGOS ownership for background-terminal cleanup, reuse of the canonical local process substrate through extraction or a narrow bridge, and a first-wave no-TUI-intervention contract.
+3. Added a modular `Session-State Foundation Sprint` package with one navigation-level sprint discussion, one umbrella strict spec, four task specs in dependency order (`01 -> 02 -> 04 -> 03`), and one mandatory slice implementation report template.
+4. Locked sprint-level rules that every slice must use the corresponding implementation reference plus the cited local OpenCode and Goose source snapshots, must normalize imported naming into LOGOS-native identity, and must explicitly track stale or invalid proving-lane code slated for removal or migration.
+5. Re-synced the previously created Item `02`, `03`, and `04` implementation reference docs into the top-level navigation and inventory so the new sprint package depends on discoverable artifacts instead of half-hidden working files.
+6. Completed Task 01 corrective pass: fixed partial git-info patch semantics for persisted-but-not-loaded OR threads (`openrouter_beta_threads.rs:update_git_info`), added persisted-elicitation counter support, and wrote two new edge-case regression tests. Updated slice report at `notes/devlog/2026-04-17-task-01-thread-manager-slice-report.md`.
+
+## 2026-04-18
+
+1. Added canonical Session-State Foundation implementation reports for `Task 03` turn lifecycle and `Task 04` fork/resume so the delivered sprint slices have evidence-backed closure artifacts inside `docs-new/07-logos-phase/implementation/` instead of only chat history.
+2. Added a required post-`Task 04` reassessment document for `Items 06, 07, 08, 10`, recording that `Item 07` is now mainly migration/wiring, `Item 06` and `Item 10` are ready for dedicated re-review on top of the delivered substrate, and `Item 08` still needs a semantics-first rollback pass before implementation.
+3. Promoted `Task 01` from the non-canonical devlog into a canonical Session-State Foundation implementation report under `docs-new/07-logos-phase/implementation/` so the sprint now has a discoverable report for every planned task.
+4. Added the real canonical `Task 02` implementation report for the session-persistence slice, explicitly recording that registry metadata/config truth now own the persistence boundary while JSONL and snapshot residue remain transitional only.
+5. Added a backfilled `Checkpoint A` reassessment after the real `Task 02` closeout, resolving the earlier sprint sequencing drift where a shell blocker report had temporarily occupied the `Task 02` slot.
+6. Ran a doc-conformance pass across the Session-State Foundation sprint package, wiring `Task 01`, `Task 02`, and `Checkpoint A` into the phase hub, top-level index, inventory, progress, validation, and the post-`Task 04` reassessment so the sprint no longer depends on the earlier false `Task 02` completion narrative.
+7. Added a migration-focused canonical Item 07 discussion that replaces the earlier broad defer posture with a code-backed owner decision: `logos-session-state` remains the non-canonical archive/metadata owner, while `codex-state` remains rollout-backed canonical metadata only.
+8. Added an implementation-ready Item 07 strict spec that limits the next slice to archive/unarchive plus metadata migration, requires removal of final provider-lane archive ownership, and rejects a fake OpenRouter move into `codex-state` without new substrate evidence.
+9. Synced the phase hub, top-level index, inventory, progress, and validation so the new Item 07 docs are discoverable as the current canonical surface.
+10. Reconciled the session-layer research ledger and related reassessment docs so Item 07 is now dual-consensus valid, points at the new migration package, and no longer carries stale `codex-state`-target defer wording.
+11. Added the Item 07 implementation report and synced it into the phase hub, top-level index, inventory, progress, and validation so the archive/metadata migration slice now has a canonical closeout artifact.
+12. Added an implementation-ready Item 05 strict spec that constrains shell-command parity to a bounded host-exec extraction slice, preserves the existing `thread/shellCommand` contract, and keeps `Item 11` background-terminal work out of scope.
+13. Added an Item 05 implementation reference that prioritizes local Codex shell-exec reuse and treats OpenCode and Goose only as guardrail sources for shell selection, subprocess hygiene, and future policy vocabulary.
+14. Synced the phase hub, top-level index, inventory, progress, validation, and the session-layer ledger so Item 05 now has a canonical implementation-start package instead of only a draft discussion.
+15. Added a mandatory operations guide for slice risk registers and boundary discipline so specs, tasks, sprints, implementation reports, and review passes explicitly track adjacent-open surfaces, transitional residue, stale owner logic, seam risk, and weaker semantics instead of overclaiming closure.
+16. Wired the new risk-register guide into `AGENTS.md`, agent navigation, the default orchestrated-agent loop, the `GLM 5.1` execution profile, the top-level index, and the documentation inventory so it becomes part of the active required-reading and task-writing workflow.
+17. Extended the slice-risk discipline with an explicit parity-remainder requirement so bounded slices must name what remains toward maximum realizable parity, not just residual risks after the local closeout.
+18. Added an implemented-items parity and scope-remainder analysis that compares closed LOGOS slices against Codex baseline behavior and borrowed Goose/OpenCode source patterns, so future work can distinguish intentional first-wave narrowness from accidental under-closure.
 
 ## Deferred
 
@@ -109,12 +178,16 @@ outline: []
 8. Keep negative findings explicit instead of leaving them implied by `UNKNOWN`.
 9. Split the provider profile document into narrower per-provider implementation specs when one provider reaches coding readiness.
 10. Revisit whether any provider-specific implementation spec now has enough evidence to become strict task spec input.
-11. Decide the next post-phase-5 implementation lane after the OpenRouter validation adapter closeout.
+11. Lock the discussion/spec package for phase-6 OpenRouter beta hardening and provider-foundation work.
 12. Narrow the feature gap matrix further if product planning needs row-level mode splits for Gemini, Z.AI, and LM Studio.
 13. Decide whether reliability and determinism deserve their own dedicated prototype-backed matrix rather than staying folded into semantics/guarantees.
 14. Revisit `main` branch protection if the maintainer model expands enough to justify mandatory review gates.
 15. Decide when plugin-host design should move from future-direction docs into a real implementation phase after persistence/resume and validation adapters stabilize.
-16. Lock a future shared structured-output discussion/spec lane before broader provider phases claim schema-output support through the new LOGOS boundary.
+16. Lock a future shared structured-output discussion/spec lane before broader provider milestones claim schema-output support through the new LOGOS boundary.
+17. Keep local validation, Gemini, and GLM/Z.AI in post-MVP milestone planning until the OpenRouter beta lane produces real-world feedback.
+18. Prove one honest OpenRouter runtime-owned tool roundtrip through existing LOGOS seams before broader phase-6 hardening expands.
+19. Explicitly walk the OpenRouter stateless replay and tool-gate risk register before treating the OR stage as closed.
+20. Execute the phase-6 discussion/spec package and prove Codex coexistence, OpenRouter agent-grade usability, and release readiness.
 
 ## Evidence
 

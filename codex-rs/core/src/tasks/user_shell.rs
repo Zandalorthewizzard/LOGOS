@@ -1,45 +1,38 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use codex_async_utils::CancelErr;
-use codex_async_utils::OrCancelExt;
+use anyhow::Result;
+use async_trait::async_trait;
 use codex_protocol::user_input::UserInput;
 use tokio_util::sync::CancellationToken;
-use tracing::error;
 use uuid::Uuid;
 
 use crate::codex::TurnContext;
-use crate::exec::ExecCapturePolicy;
-use crate::exec::StdoutStream;
-use crate::exec::execute_exec_request;
 use crate::exec_env::create_env;
-use crate::sandboxing::ExecRequest;
+use crate::host_exec::HostExecApprovalPolicy;
+use crate::host_exec::HostExecBegin;
+use crate::host_exec::HostExecContext;
+use crate::host_exec::HostExecEnd;
+use crate::host_exec::HostExecNotificationSink;
+use crate::host_exec::HostExecSandboxPolicy;
+use crate::host_exec::run_one_shot_shell_command;
 use crate::state::TaskKind;
 use crate::tools::format_exec_output_str;
-use crate::tools::runtimes::maybe_wrap_shell_lc_with_snapshot;
 use crate::user_shell_command::user_shell_command_record_item;
 use codex_protocol::exec_output::ExecToolCallOutput;
 use codex_protocol::exec_output::StreamOutput;
 use codex_protocol::protocol::EventMsg;
 use codex_protocol::protocol::ExecCommandBeginEvent;
 use codex_protocol::protocol::ExecCommandEndEvent;
+use codex_protocol::protocol::ExecCommandOutputDeltaEvent;
 use codex_protocol::protocol::ExecCommandSource;
-use codex_protocol::protocol::ExecCommandStatus;
-use codex_protocol::protocol::SandboxPolicy;
 use codex_protocol::protocol::TurnStartedEvent;
-use codex_sandboxing::SandboxType;
-use codex_shell_command::parse_command::parse_command;
 
 use super::SessionTask;
 use super::SessionTaskContext;
 use crate::codex::Session;
 use codex_protocol::models::ResponseInputItem;
 use codex_protocol::models::ResponseItem;
-use codex_protocol::permissions::FileSystemSandboxPolicy;
-use codex_protocol::permissions::NetworkSandboxPolicy;
-
-const USER_SHELL_TIMEOUT_MS: u64 = 60 * 60 * 1000; // 1 hour
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum UserShellCommandMode {
     /// Executes as an independent turn lifecycle (emits TurnStarted/TurnComplete
@@ -117,197 +110,140 @@ pub(crate) async fn execute_user_shell_command(
         session.send_event(turn_context.as_ref(), event).await;
     }
 
-    // Execute the user's script under their default shell when known; this
-    // allows commands that use shell features (pipes, &&, redirects, etc.).
-    // We do not source rc files or otherwise reformat the script.
-    let use_login_shell = true;
-    let session_shell = session.user_shell();
-    let display_command = session_shell.derive_exec_args(&command, use_login_shell);
-    let exec_command = maybe_wrap_shell_lc_with_snapshot(
-        &display_command,
-        session_shell.as_ref(),
-        turn_context.cwd.as_path(),
-        &turn_context.shell_environment_policy.r#set,
-    );
-
     let call_id = Uuid::new_v4().to_string();
     let raw_command = command;
-    let cwd = turn_context.cwd.clone();
-
-    let parsed_cmd = parse_command(&display_command);
-    session
-        .send_event(
-            turn_context.as_ref(),
-            EventMsg::ExecCommandBegin(ExecCommandBeginEvent {
-                call_id: call_id.clone(),
-                process_id: None,
-                turn_id: turn_context.sub_id.clone(),
-                command: display_command.clone(),
-                cwd: cwd.to_path_buf(),
-                parsed_cmd: parsed_cmd.clone(),
-                source: ExecCommandSource::UserShell,
-                interaction_input: None,
-            }),
-        )
-        .await;
-
-    let sandbox_policy = SandboxPolicy::DangerFullAccess;
-    let exec_env = ExecRequest {
-        command: exec_command.clone(),
-        cwd: cwd.to_path_buf(),
+    let sink = Arc::new(CodexHostExecSink {
+        session: session.clone(),
+        turn_context: turn_context.clone(),
+    });
+    let outcome = run_one_shot_shell_command(HostExecContext {
+        turn_id: turn_context.sub_id.clone(),
+        call_id,
+        process_id: None,
+        raw_command: raw_command.clone(),
+        cwd: turn_context.cwd.to_path_buf(),
         env: create_env(
             &turn_context.shell_environment_policy,
             Some(session.conversation_id),
         ),
+        shell: session.user_shell(),
+        use_login_shell: true,
+        shell_environment_overrides: turn_context.shell_environment_policy.r#set.clone(),
+        source: ExecCommandSource::UserShell,
+        sandbox_policy: HostExecSandboxPolicy::NoSandbox,
+        approval_policy: HostExecApprovalPolicy::SkipApproval,
+        notification_sink: sink,
+        cancellation_token,
+        registration: None,
         network: turn_context.network.clone(),
-        // TODO(zhao-oai): Now that we have ExecExpiration::Cancellation, we
-        // should use that instead of an "arbitrarily large" timeout here.
-        expiration: USER_SHELL_TIMEOUT_MS.into(),
-        capture_policy: ExecCapturePolicy::ShellTool,
-        sandbox: SandboxType::None,
         windows_sandbox_level: turn_context.windows_sandbox_level,
         windows_sandbox_private_desktop: turn_context
             .config
             .permissions
             .windows_sandbox_private_desktop,
-        sandbox_policy: sandbox_policy.clone(),
-        file_system_sandbox_policy: FileSystemSandboxPolicy::from(&sandbox_policy),
-        network_sandbox_policy: NetworkSandboxPolicy::from(&sandbox_policy),
-        windows_restricted_token_filesystem_overlay: None,
-        arg0: None,
-    };
+    })
+    .await;
 
-    let stdout_stream = Some(StdoutStream {
-        sub_id: turn_context.sub_id.clone(),
-        call_id: call_id.clone(),
-        tx_event: session.get_tx_event(),
-    });
-
-    let exec_result = execute_exec_request(exec_env, stdout_stream, /*after_spawn*/ None)
-        .or_cancel(&cancellation_token)
-        .await;
-
-    match exec_result {
-        Err(CancelErr::Cancelled) => {
-            let aborted_message = "command aborted by user".to_string();
-            let exec_output = ExecToolCallOutput {
-                exit_code: -1,
-                stdout: StreamOutput::new(String::new()),
-                stderr: StreamOutput::new(aborted_message.clone()),
-                aggregated_output: StreamOutput::new(aborted_message.clone()),
-                duration: Duration::ZERO,
-                timed_out: false,
-            };
-            persist_user_shell_output(
-                &session,
-                turn_context.as_ref(),
-                &raw_command,
-                &exec_output,
-                mode,
-            )
-            .await;
-            session
-                .send_event(
-                    turn_context.as_ref(),
-                    EventMsg::ExecCommandEnd(ExecCommandEndEvent {
-                        call_id,
-                        process_id: None,
-                        turn_id: turn_context.sub_id.clone(),
-                        command: display_command.clone(),
-                        cwd: cwd.to_path_buf(),
-                        parsed_cmd: parsed_cmd.clone(),
-                        source: ExecCommandSource::UserShell,
-                        interaction_input: None,
-                        stdout: String::new(),
-                        stderr: aborted_message.clone(),
-                        aggregated_output: aborted_message.clone(),
-                        exit_code: -1,
-                        duration: Duration::ZERO,
-                        formatted_output: aborted_message,
-                        status: ExecCommandStatus::Failed,
-                    }),
-                )
-                .await;
-        }
-        Ok(Ok(output)) => {
-            session
-                .send_event(
-                    turn_context.as_ref(),
-                    EventMsg::ExecCommandEnd(ExecCommandEndEvent {
-                        call_id: call_id.clone(),
-                        process_id: None,
-                        turn_id: turn_context.sub_id.clone(),
-                        command: display_command.clone(),
-                        cwd: cwd.to_path_buf(),
-                        parsed_cmd: parsed_cmd.clone(),
-                        source: ExecCommandSource::UserShell,
-                        interaction_input: None,
-                        stdout: output.stdout.text.clone(),
-                        stderr: output.stderr.text.clone(),
-                        aggregated_output: output.aggregated_output.text.clone(),
-                        exit_code: output.exit_code,
-                        duration: output.duration,
-                        formatted_output: format_exec_output_str(
-                            &output,
-                            turn_context.truncation_policy,
-                        ),
-                        status: if output.exit_code == 0 {
-                            ExecCommandStatus::Completed
-                        } else {
-                            ExecCommandStatus::Failed
-                        },
-                    }),
-                )
-                .await;
-
-            persist_user_shell_output(&session, turn_context.as_ref(), &raw_command, &output, mode)
-                .await;
-        }
-        Ok(Err(err)) => {
-            error!("user shell command failed: {err:?}");
-            let message = format!("execution error: {err:?}");
-            let exec_output = ExecToolCallOutput {
+    let output = match outcome {
+        Ok(outcome) => outcome.output,
+        Err(err) => {
+            let message = format!("execution error: {err:#}");
+            ExecToolCallOutput {
                 exit_code: -1,
                 stdout: StreamOutput::new(String::new()),
                 stderr: StreamOutput::new(message.clone()),
-                aggregated_output: StreamOutput::new(message.clone()),
+                aggregated_output: StreamOutput::new(message),
                 duration: Duration::ZERO,
                 timed_out: false,
-            };
-            session
-                .send_event(
-                    turn_context.as_ref(),
-                    EventMsg::ExecCommandEnd(ExecCommandEndEvent {
-                        call_id,
-                        process_id: None,
-                        turn_id: turn_context.sub_id.clone(),
-                        command: display_command,
-                        cwd: cwd.to_path_buf(),
-                        parsed_cmd,
-                        source: ExecCommandSource::UserShell,
-                        interaction_input: None,
-                        stdout: exec_output.stdout.text.clone(),
-                        stderr: exec_output.stderr.text.clone(),
-                        aggregated_output: exec_output.aggregated_output.text.clone(),
-                        exit_code: exec_output.exit_code,
-                        duration: exec_output.duration,
-                        formatted_output: format_exec_output_str(
-                            &exec_output,
-                            turn_context.truncation_policy,
-                        ),
-                        status: ExecCommandStatus::Failed,
-                    }),
-                )
-                .await;
-            persist_user_shell_output(
-                &session,
-                turn_context.as_ref(),
-                &raw_command,
-                &exec_output,
-                mode,
+            }
+        }
+    };
+
+    persist_user_shell_output(&session, turn_context.as_ref(), &raw_command, &output, mode).await;
+}
+
+struct CodexHostExecSink {
+    session: Arc<Session>,
+    turn_context: Arc<TurnContext>,
+}
+
+#[async_trait]
+impl HostExecNotificationSink for CodexHostExecSink {
+    async fn emit_begin(&self, event: HostExecBegin) -> Result<()> {
+        self.session
+            .send_event(
+                self.turn_context.as_ref(),
+                EventMsg::ExecCommandBegin(ExecCommandBeginEvent {
+                    call_id: event.call_id,
+                    process_id: event.process_id,
+                    turn_id: event.turn_id,
+                    command: event.command,
+                    cwd: event.cwd,
+                    parsed_cmd: event.parsed_cmd,
+                    source: event.source,
+                    interaction_input: None,
+                }),
             )
             .await;
-        }
+        Ok(())
+    }
+
+    async fn emit_delta(&self, event: ExecCommandOutputDeltaEvent) -> Result<()> {
+        self.session
+            .send_event(
+                self.turn_context.as_ref(),
+                EventMsg::ExecCommandOutputDelta(event),
+            )
+            .await;
+        Ok(())
+    }
+
+    async fn emit_end(&self, event: HostExecEnd) -> Result<()> {
+        self.session
+            .send_event(
+                self.turn_context.as_ref(),
+                EventMsg::ExecCommandEnd(ExecCommandEndEvent {
+                    call_id: event.call_id,
+                    process_id: event.process_id,
+                    turn_id: event.turn_id,
+                    command: event.command,
+                    cwd: event.cwd,
+                    parsed_cmd: event.parsed_cmd,
+                    source: event.source,
+                    interaction_input: None,
+                    stdout: event.output.stdout.text.clone(),
+                    stderr: event.output.stderr.text.clone(),
+                    aggregated_output: event.output.aggregated_output.text.clone(),
+                    exit_code: event.output.exit_code,
+                    duration: event.output.duration,
+                    formatted_output: format_exec_output_str(
+                        &event.output,
+                        self.turn_context.truncation_policy,
+                    ),
+                    status: event.status,
+                }),
+            )
+            .await;
+        Ok(())
+    }
+
+    async fn emit_terminal_interaction(
+        &self,
+        event: crate::host_exec::HostExecTerminalInteraction,
+    ) -> Result<()> {
+        use codex_protocol::protocol::EventMsg;
+        use codex_protocol::protocol::TerminalInteractionEvent;
+        self.session
+            .send_event(
+                self.turn_context.as_ref(),
+                EventMsg::TerminalInteraction(TerminalInteractionEvent {
+                    call_id: event.call_id,
+                    process_id: event.process_id.unwrap_or_default(),
+                    stdin: event.stdin,
+                }),
+            )
+            .await;
+        Ok(())
     }
 }
 

@@ -38,6 +38,7 @@ mod flags;
 mod git_info_tests;
 mod guardian;
 mod hook_runtime;
+pub mod host_exec;
 pub mod instructions;
 pub mod landlock;
 pub mod mcp;

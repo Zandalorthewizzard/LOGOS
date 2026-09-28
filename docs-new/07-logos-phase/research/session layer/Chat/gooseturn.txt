@@ -1,0 +1,178 @@
+Готово. Вот что сделано:
+Итоги
+16/16 RA-документов — секция ## Goose Analysis заполнена, таблицы Cross-Project Comparison Matrix обновлены.
+Обновлённые файлы:
+- RA-1.1 через RA-3.4 (16 документов) — Goose analysis + comparison matrix
+- INDEX.md — Goose: 16/16 Done
+- SUMMARY.md — новый документ с тремя ключевыми таблицами:
+  1. Master Comparison Table — все 17 механик × 4 проекта
+  2. Feature Presence Matrix — да/нет по 19 фичам
+  3. Pattern Recommendations by Priority — Tier 1/2/3 с указанием источника
+Ключевые находки по Goose:
+- Сильные стороны: SQLite + 9 миграций, Pluggable ToolInspector, 30+ провайдеров, canonical model registry, RepetitionInspector, cron-сессии
+- Слабые стороны: нет rollback, нет concurrency guard, нет частичного сохранения при interrupt, нет PTY, нет tool output pruning, критические модули отсутствуют в checkout (agents/, context_mgmt/, permission/)
+- Уникальное для заимствования: manages_own_context(), builder-pattern updates, date-prefixed IDs, LLM-generated session names, chat history search
+▣  Build · glm-5.1 · 23m 42s
+Отлично давай как и в прошлый раз подробнее и простым языком по новым findings сильным и слабым сторонам в сравнении goose против opencode по уникальным заимствованиям 
+▣  Build · glm-5.1 · interrupted
+Жду твой ответ
+▣  Build · glm-5.1 · interrupted
+?
+Да, вот нормальная раскладка простым языком.
+Главное
+Если очень грубо:
+- OpenCode сильнее как архитектура stateless session layer
+- Goose сильнее как общая многопровайдерная платформа и инфраструктурный каркас
+- для LOGOS лучше брать не одного победителя целиком, а:
+  - из OpenCode — логику session orchestration
+  - из Goose — persistence/model/provider infrastructure и inspection framework
+В чём Goose сильнее OpenCode
+- SQLite + миграции сделаны взрослее
+  - У Goose нормальная схема с версиями и миграциями.
+  - Это проще сопровождать, чем ad-hoc формат.
+  - Для LOGOS это полезно как база хранилища stateless sessions.
+- Builder-pattern для обновлений
+  - У Goose обновления сессии идут через SessionUpdateBuilder.
+  - Это проще читать и безопаснее, чем “передай patch-объект и надейся, что всё совпало”.
+  - Для Rust-кода LOGOS это особенно хороший паттерн.
+- Очень сильный provider layer
+  - У Goose 30+ провайдеров, фабрика провайдеров, registry, canonical model data.
+  - Это значит: у них лучше продуман слой “как подключать много разных провайдеров”.
+  - У OpenCode это тоже есть, но Goose выглядит шире и системнее именно в provider breadth.
+- Canonical model registry
+  - Goose хранит нормальные сведения о моделях: context limit, output limits, reasoning hints.
+  - Это реально полезно для compaction, overflow detection, выбора fast model.
+  - У OpenCode такого зрелого централизованного справочника я не увидел.
+- ToolInspector framework
+  - Очень хорошая идея: проверки инструментов как отдельные инспекторы.
+  - Можно добавлять repetition check, permission logic, security logic как независимые слои.
+  - Это более расширяемо, чем жёстко вшитая логика.
+- RepetitionInspector
+  - Это goose-версия doom loop detection.
+  - Причём она даже гибче, чем у OpenCode: configurable threshold, structured findings.
+  - То есть не просто “3 раза подряд — плохо”, а нормальный extensible механизм.
+- Session type taxonomy
+  - У Goose есть разные типы сессий: user, scheduled, subagent, hidden, terminal, gateway, acp.
+  - Это хороший знак: модель сессии изначально не слишком узкая.
+  - Для LOGOS это полезно, если session layer будет не только для user chat.
+- Chat history search
+  - SQL-поиск по истории сессий.
+  - Это не core session mechanic, но как продуктовая возможность — сильная штука.
+- Scheduled sessions
+  - У Goose есть cron/scheduler.
+  - Это не приоритет для MVP LOGOS, но показывает, что их session model хорошо живёт вне простого CLI-диалога.
+В чём OpenCode сильнее Goose
+Тут, на мой взгляд, самое важное.
+- Лучше понимает именно проблему stateless sessions
+  - OpenCode прямо строит систему вокруг того, что провайдер stateless и клиент должен владеть состоянием.
+  - Goose во многом выглядит как общая платформа агентов, а не как тщательно выстроенный stateless session architecture.
+- Есть concurrency guard
+  - Runner/BusyError — очень важная вещь.
+  - Это защита от параллельных turn-ов на одну и ту же сессию.
+  - У Goose этого нет, и это реальная слабость.
+- Compaction намного сильнее
+  - У OpenCode есть двухэтапный подход:
+    1. pruning tool outputs
+    2. summarization only if still needed
+  - Это намного практичнее.
+  - У Goose, насколько видно, compaction проще и слабее.
+- Tool output pruning
+  - OpenCode понимает важный практический факт:
+    - контекст раздувают не столько сообщения, сколько tool outputs.
+  - Goose такого уровня зрелости тут не показывает.
+- Soft-delete archive
+  - У OpenCode архив — это timestamp field.
+  - У Goose вообще нет archive/unarchive, только hard delete.
+  - Тут OpenCode явно лучше.
+- Partial state on interrupt
+  - OpenCode не выбрасывает прерванный ответ, а сохраняет частичный результат.
+  - Для UX это очень важно.
+  - У Goose этого не видно.
+- Rollback / revert
+  - У OpenCode есть реальный revert-механизм, ещё и с файловой частью.
+  - У Goose rollback по сути нет.
+- Per-message provider tracking
+  - OpenCode хранит provider/model на уровне сообщений.
+  - Это фундамент для честного multi-provider handoff.
+  - У Goose provider в основном на уровне session.
+  - То есть Goose умеет переключить провайдера, но история не становится по-настоящему multi-provider-aware.
+- Архитектурно ближе к тому, что нужно LOGOS
+  - Если вопрос: “кто лучше подсказывает, как строить Stateless Session Layer?”
+  - Ответ: OpenCode.
+Уникальные заимствования из Goose
+Вот что я бы назвал реально ценным и специфичным.
+- SessionUpdateBuilder
+  - Очень хороший Rust-friendly паттерн для mutation API.
+  - Я бы почти прямо заимствовал идею в LOGOS.
+- ToolInspector / ToolInspectionManager
+  - Это один из лучших кусков Goose.
+  - Особенно полезно для LOGOS, где approvals, reviews, safety checks и tool governance уже важны.
+- manages_own_context()
+  - Очень сильная идея.
+  - Провайдер может честно сказать: “контекстом управляю я сам, не надо меня компактиь снаружи”.
+  - Для LOGOS это прям идеально:
+    - OpenAI Responses path
+    - provider-native backends
+    - honest capability-aware adapters
+  - Это почти полностью совпадает с философией LOGOS.
+- Canonical model registry
+  - Стоит перенять.
+  - Иначе context limits, output limits, reasoning flags будут размазаны по коду и конфигам.
+- Date-prefixed sequential IDs
+  - Не must-have, но удобно.
+  - Лучше случайных UUID для листинга и ручной навигации.
+- LLM-generated session naming
+  - Не критично для архитектуры, но как UX-фича вполне хорошая.
+- Task-local session context
+  - Для tracing/telemetry это аккуратный паттерн.
+Уникальные заимствования из OpenCode, которые Goose не перекрывает
+Это как раз то, что Goose не заменяет.
+- Runner + BusyError
+- Two-phase compaction
+- Tool output pruning with protection window
+- Soft-delete archive
+- Partial save on interrupt
+- Per-message provider tracking
+- Stronger stateless-session-first mental model
+Слабые стороны Goose относительно OpenCode
+Если простым языком:
+- Goose местами выглядит как хороший общий агентный фреймворк
+- OpenCode выглядит как лучше продуманная session runtime система
+Конкретно:
+- нет concurrency guard
+- нет rollback
+- нет partial interrupt persistence
+- нет soft archive
+- нет сильной compaction strategy
+- нет per-message provider tracking
+- часть ключевых модулей вообще не попала в checkout, из-за чего некоторые выводы менее уверенные
+Слабые стороны OpenCode относительно Goose
+Чтобы было честно:
+- меньше впечатляет как общая provider platform
+- меньше зрелости в model metadata / canonical registry
+- менее приятные местами mutation interfaces для Rust-style мышления
+- нет такого хорошего inspector framework
+- нет provider opt-out типа manages_own_context()
+Что это значит для LOGOS practically
+Я бы свёл к такой формуле:
+- Базовая архитектура session layer → брать с OpenCode
+- Persistence/model/provider infrastructure → много брать с Goose
+- Approval / inspection pipeline → брать с Goose
+- Compaction / interrupt / archive / rollback mindset → брать с OpenCode
+То есть целевая смесь примерно такая:
+1. OpenCode-style stateless session orchestration
+2. Goose-style SQLite + migrations + builder updates
+3. Goose-style ToolInspector framework
+4. OpenCode-style concurrency guard
+5. OpenCode-style compaction
+6. OpenCode-style partial interrupt persistence
+7. OpenCode-style archive semantics
+8. Goose-style canonical model registry
+9. Goose-style manages_own_context() for provider-native backends
+Самый важный новый вывод
+Самое интересное новое отличие после прохода по Goose:
+- OpenCode лучше отвечает на вопрос:  
+  “как должен жить stateless session runtime?”
+- Goose лучше отвечает на вопрос:  
+  “как должна выглядеть расширяемая многопровайдерная agent platform?”
+А LOGOS нужны обе вещи сразу.

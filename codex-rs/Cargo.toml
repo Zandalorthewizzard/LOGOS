@@ -90,8 +90,10 @@ members = [
     "logos-runtime-types",
     "logos-provider-api",
     "logos-provider-openrouter",
+    "logos-openrouter-beta",
     "logos-provider-openai",
     "logos-journal",
+    "logos-session-state",
     "logos-session-engine",
     "logos-tool-runtime",
 ]
@@ -196,8 +198,10 @@ codex-v8-poc = { path = "v8-poc" }
 codex-windows-sandbox = { path = "windows-sandbox-rs" }
 logos-provider-api = { path = "logos-provider-api" }
 logos-journal = { path = "logos-journal" }
-logos-provider-openrouter = { path = "logos-provider-openrouter" }
-logos-provider-openai = { path = "logos-provider-openai" }
+logos-session-state = { path = "logos-session-state" }
+    logos-provider-openrouter = { path = "logos-provider-openrouter" }
+    logos-openrouter-beta = { path = "logos-openrouter-beta" }
+    logos-provider-openai = { path = "logos-provider-openai" }
 logos-runtime-types = { path = "logos-runtime-types" }
 logos-session-engine = { path = "logos-session-engine" }
 logos-tool-runtime = { path = "logos-tool-runtime" }

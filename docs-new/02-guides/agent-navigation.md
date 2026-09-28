@@ -9,6 +9,7 @@ related:
     [../00-navigation/INDEX.md],
     [../01-concepts/ai-driven-development.md],
     [../03-templates/strict-spec.template.md],
+    [operations/2026-04-18-slice-risk-register-and-boundary-discipline.md],
     [working-notes.md],
     [../07-logos-phase/README.md]
   ]
@@ -27,7 +28,8 @@ outline: []
 3. `../01-concepts/strict-specs.md`
 4. `../01-concepts/discussion-first.md`
 5. `working-notes.md`
-6. `../../notes/README.md`
+6. `operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
+7. `../../notes/README.md`
 
 ## Resume / Replacement Chain
 
@@ -39,15 +41,19 @@ outline: []
 ## Task Chain
 
 1. Task spec file.
-2. Ordered implementation tasks.
-3. Acceptance and tests.
-4. Meta-file sync (`inventory`, `progress`, `validation`).
+2. `operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
+3. Ordered implementation tasks.
+4. Acceptance and tests.
+5. Meta-file sync (`inventory`, `progress`, `validation`).
 
 ## Evidence
 
 - path: `../00-navigation/INDEX.md`
   symbol: `Quick Start`
   lines: 1-200
+- path: `operations/2026-04-18-slice-risk-register-and-boundary-discipline.md`
+  symbol: `Required Questions`
+  lines: 1-240
 - path: `working-notes.md`
   symbol: `Recovery Flow`
   lines: 1-200
@@ -57,5 +63,6 @@ outline: []
 - [[../00-navigation/INDEX.md]]
 - [[../01-concepts/ai-driven-development.md]]
 - [[../03-templates/strict-spec.template.md]]
+- [[operations/2026-04-18-slice-risk-register-and-boundary-discipline.md]]
 - [[working-notes.md]]
 - [[../07-logos-phase/README.md]]

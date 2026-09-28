@@ -121,6 +121,52 @@ This index records every intentional LOGOS intervention in `codex-rs/core/` or e
 - upstream_conflict_risk: `medium`; this seam touches the central turn-scoped client session type, but remains narrow and focused on explicit turn-state transfer.
 - rollback_or_replace_path: if upstream later exposes an equivalent public turn-state transfer hook, migrate LOGOS to it and retire this seam.
 
+### SEAM-2026-04-18-04 Shared Host Exec Shell Runner
+
+- status: `active`
+- introduced_by_commit: `pending-current-branch`
+- area:
+  1. `codex-rs/core/src/host_exec.rs`
+  2. `codex-rs/core/src/lib.rs`
+- why_needed: Item 05 needed OpenRouter `thread/shellCommand` to reuse the mature local one-shot shell-command mechanics without leaving `drive_openrouter_shell_command()` as a second permanent execution owner. A pure wrapper outside `codex-core` was insufficient because the reusable shell-command substrate already lives behind `execute_exec_request()`, `Shell`, and shell snapshot wrapping inside `codex-core`.
+- minimal_scope:
+  1. add a narrow public `host_exec` module for one-shot shell execution
+  2. add `HostExecNotificationSink` and `HostExecContext` as explicit caller boundaries
+  3. add `HostExecRegistry` for thread-scoped cancellation used by the touched app-server shell-command surface
+  4. add `HostExecProcessEntry` for thread-scoped process metadata tracking (Item 11 extension)
+  5. add `HostExecRegistry::thread_processes` query for shared process lifecycle visibility (Item 11 extension)
+  6. add `InteractiveProcessState` and `spawn_interactive_process` for interactive PTY background-terminal lifecycle (Item 11 interactive wave)
+  7. add `HostExecRegistry::write_stdin`, `resize_process`, `read_buffered_output` for interactive process control (Item 11 interactive wave)
+  8. add `HostExecNotificationSink::emit_terminal_interaction` for terminal interaction routing (Item 11 interactive wave)
+- affected_files:
+  1. `codex-rs/core/src/host_exec.rs`
+  2. `codex-rs/core/src/host_exec_tests.rs`
+  3. `codex-rs/core/src/tasks/user_shell.rs`
+  4. `codex-rs/core/src/lib.rs`
+- public_surface_added:
+  1. `codex_core::host_exec::HostExecContext`
+  2. `codex_core::host_exec::HostExecNotificationSink`
+  3. `codex_core::host_exec::HostExecRegistry`
+  4. `codex_core::host_exec::run_one_shot_shell_command`
+  5. `codex_core::host_exec::HostExecProcessEntry` (Item 11)
+  6. `codex_core::host_exec::HostExecRegistry::thread_processes` (Item 11)
+  7. `codex_core::host_exec::InteractiveProcessState` (Item 11 interactive wave)
+  8. `codex_core::host_exec::InteractiveHostExecContext` (Item 11 interactive wave)
+  9. `codex_core::host_exec::spawn_interactive_process` (Item 11 interactive wave)
+  10. `codex_core::host_exec::HostExecRegistry::write_stdin` (Item 11 interactive wave)
+  11. `codex_core::host_exec::HostExecRegistry::resize_process` (Item 11 interactive wave)
+  12. `codex_core::host_exec::HostExecRegistry::read_buffered_output` (Item 11 interactive wave)
+  13. `codex_core::host_exec::HostExecNotificationSink::emit_terminal_interaction` (Item 11 interactive wave)
+  14. `codex_core::host_exec::HostExecTerminalInteraction` (Item 11 interactive wave)
+- consuming_logos_crates:
+  1. `codex-rs/app-server`
+- non_goals:
+  1. no broad unified-exec or background-terminal redesign in `codex-core`
+  2. no provider-specific semantics embedded in the shared runner
+  3. no protocol change for `thread/shellCommand`
+- upstream_conflict_risk: `medium`; the seam adds a new public host-exec module in `codex-core`, but keeps ownership narrow to one-shot shell-command execution, thread-scoped cancellation, and thread-scoped process metadata for the touched surface.
+- rollback_or_replace_path: if upstream later exposes an equivalent public one-shot host-exec runner and cancellation registry, migrate LOGOS callers to that upstream surface and retire this seam.
+
 ## Evidence
 
 - equivalent: `git show --stat --summary 983795862`

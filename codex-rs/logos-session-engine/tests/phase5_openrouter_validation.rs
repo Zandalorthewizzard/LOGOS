@@ -645,6 +645,10 @@ fn build_openrouter_adapter(server: &MockServer) -> Arc<dyn ProviderAdapter> {
         base_url: format!("{}/api/v1", server.uri()),
         api_key: "test-key".to_string(),
         model_ref: openrouter_model_ref(),
+        default_headers: reqwest::header::HeaderMap::new(),
+        query_params: Vec::new(),
+        request_max_retries: 0,
+        request_timeout: std::time::Duration::from_secs(30),
     }))
 }
 

@@ -21,6 +21,8 @@ related:
     [2026-04-11-phase-4-persistence-resume-acceptance-report.md],
     [2026-04-02-openrouter-validation-adapter-strict-spec.md],
     [2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md],
+    [2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-strict-spec.md],
+    [2026-04-14-phase-6-session-state-layer-extraction-strict-spec.md],
     [2026-04-02-codex-base-repository-strategy.md],
     [2026-04-02-upstream-sync-policy.md],
     [2026-04-02-branch-and-pr-workflow.md],
@@ -52,6 +54,8 @@ This folder holds phase slices, execution plans, strict implementation specs, an
 - [[2026-04-11-phase-4-persistence-resume-acceptance-report.md]]
 - [[2026-04-02-openrouter-validation-adapter-strict-spec.md]]
 - [[2026-04-11-phase-5-openrouter-validation-adapter-acceptance-report.md]]
+- [[2026-04-11-phase-6-openrouter-beta-hardening-and-release-readiness-strict-spec.md]]
+- [[2026-04-14-phase-6-session-state-layer-extraction-strict-spec.md]]
 - [[2026-04-02-codex-base-repository-strategy.md]]
 - [[2026-04-02-upstream-sync-policy.md]]
 - [[2026-04-02-branch-and-pr-workflow.md]]

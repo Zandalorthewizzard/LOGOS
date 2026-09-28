@@ -58,6 +58,9 @@ codex-state = { workspace = true }
 codex-tools = { workspace = true }
 codex-utils-absolute-path = { workspace = true }
 codex-utils-json-to-toml = { workspace = true }
+logos-openrouter-beta = { workspace = true }
+logos-session-state = { workspace = true }
+logos-runtime-types = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 constant_time_eq = { workspace = true }

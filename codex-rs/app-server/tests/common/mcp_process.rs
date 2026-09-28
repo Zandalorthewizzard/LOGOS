@@ -57,8 +57,11 @@ use codex_app_server_protocol::ReviewStartParams;
 use codex_app_server_protocol::ServerRequest;
 use codex_app_server_protocol::SkillsListParams;
 use codex_app_server_protocol::ThreadArchiveParams;
+use codex_app_server_protocol::ThreadBackgroundTerminalsCleanParams;
 use codex_app_server_protocol::ThreadCompactStartParams;
+use codex_app_server_protocol::ThreadDecrementElicitationParams;
 use codex_app_server_protocol::ThreadForkParams;
+use codex_app_server_protocol::ThreadIncrementElicitationParams;
 use codex_app_server_protocol::ThreadListParams;
 use codex_app_server_protocol::ThreadLoadedListParams;
 use codex_app_server_protocol::ThreadMetadataUpdateParams;
@@ -131,6 +134,7 @@ impl McpProcess {
         cmd.stderr(Stdio::piped());
         cmd.current_dir(codex_home);
         cmd.env("CODEX_HOME", codex_home);
+        cmd.env("LOGOS_HOME", codex_home);
         cmd.env("RUST_LOG", "info");
         cmd.env_remove(CODEX_INTERNAL_ORIGINATOR_OVERRIDE_ENV_VAR);
         cmd.args(args);
@@ -357,6 +361,26 @@ impl McpProcess {
         self.send_request("thread/archive", params).await
     }
 
+    /// Send a `thread/increment_elicitation` JSON-RPC request.
+    pub async fn send_thread_increment_elicitation_request(
+        &mut self,
+        params: ThreadIncrementElicitationParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/increment_elicitation", params)
+            .await
+    }
+
+    /// Send a `thread/decrement_elicitation` JSON-RPC request.
+    pub async fn send_thread_decrement_elicitation_request(
+        &mut self,
+        params: ThreadDecrementElicitationParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/decrement_elicitation", params)
+            .await
+    }
+
     /// Send a `thread/name/set` JSON-RPC request.
     pub async fn send_thread_set_name_request(
         &mut self,
@@ -409,6 +433,46 @@ impl McpProcess {
     ) -> anyhow::Result<i64> {
         let params = Some(serde_json::to_value(params)?);
         self.send_request("thread/shellCommand", params).await
+    }
+
+    /// Send a `thread/backgroundTerminals/clean` JSON-RPC request.
+    pub async fn send_thread_background_terminals_clean_request(
+        &mut self,
+        params: ThreadBackgroundTerminalsCleanParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/backgroundTerminals/clean", params)
+            .await
+    }
+
+    /// Send a `thread/backgroundTerminal/start` JSON-RPC request.
+    pub async fn send_thread_background_terminal_start_request(
+        &mut self,
+        params: codex_app_server_protocol::ThreadBackgroundTerminalStartParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/backgroundTerminal/start", params)
+            .await
+    }
+
+    /// Send a `thread/backgroundTerminal/writeStdin` JSON-RPC request.
+    pub async fn send_thread_background_terminal_write_stdin_request(
+        &mut self,
+        params: codex_app_server_protocol::ThreadBackgroundTerminalWriteStdinParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/backgroundTerminal/writeStdin", params)
+            .await
+    }
+
+    /// Send a `thread/backgroundTerminals/list` JSON-RPC request.
+    pub async fn send_thread_background_terminals_list_request(
+        &mut self,
+        params: codex_app_server_protocol::ThreadBackgroundTerminalsListParams,
+    ) -> anyhow::Result<i64> {
+        let params = Some(serde_json::to_value(params)?);
+        self.send_request("thread/backgroundTerminals/list", params)
+            .await
     }
 
     /// Send a `thread/rollback` JSON-RPC request.
